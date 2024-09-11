@@ -71,14 +71,20 @@
 				};
 			})
 		);
-		window.addEventListener('pointerdown', () => {
+		const onPointerDown = () => {
 			isPointerDown = true;
-		});
-		window.addEventListener('pointerup', () => {
-			isPointerDown = false;
-		});
+		}
 
+		const onPointerUp = () => {
+			isPointerDown = false;
+		}
+		window.addEventListener('pointerdown', onPointerDown);
+		window.addEventListener('pointerup', () => onPointerUp);
 		mounted = true;
+		return () => {
+			window.removeEventListener('pointerup', onPointerUp)
+			window.removeEventListener('pointerdown', onPointerDown)
+		};
 	});
 
 	let rowLength = solution.length;
@@ -245,40 +251,40 @@
 </script>
 
 <body>
-	<div
-		role="grid"
-		class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
-	>
-		{#each tiles as row, rowIndex}
-			{#each row as tile, colIndex}
-				<div
-					role="gridcell"
-					on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
-					tabindex={tile.isBlock ? null : 0}
-					bind:this={tiles[rowIndex][colIndex].element}
-					class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
-					class:border-r-[1px]={colIndex < columnLength - 1}
-					class:border-b-[1px]={rowIndex < rowLength - 1}
-					class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
-					class:bg-[#A7D8FF]={tile.isCurrentWord}
-					class:bg-black={tile.isBlock}
-					on:focus={() => {
+<div
+	role="grid"
+	class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
+>
+	{#each tiles as row, rowIndex}
+		{#each row as tile, colIndex}
+			<div
+				role="gridcell"
+				on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
+				tabindex={tile.isBlock ? null : 0}
+				bind:this={tiles[rowIndex][colIndex].element}
+				class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
+				class:border-r-[1px]={colIndex < columnLength - 1}
+				class:border-b-[1px]={rowIndex < rowLength - 1}
+				class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
+				class:bg-[#A7D8FF]={tile.isCurrentWord}
+				class:bg-black={tile.isBlock}
+				on:focus={() => {
 						onTileFocus(rowIndex, colIndex);
 					}}
-					on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
-				>
-					{#if !tile.isBlock}
+				on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
+			>
+				{#if !tile.isBlock}
 						<span class="absolute pl-0.5 text-[0.75em] cursor-default select-none">
 							{tile.clueNumber || ''}
 						</span>
-						<div class="flex items-center justify-center w-full h-full">
+					<div class="flex items-center justify-center w-full h-full">
 							<span class="text-[1.6em] cursor-default select-none">
 								{tile.guess}
 							</span>
-						</div>
-					{/if}
-				</div>
-			{/each}
+					</div>
+				{/if}
+			</div>
 		{/each}
-	</div>
+	{/each}
+</div>
 </body>
