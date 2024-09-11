@@ -10,6 +10,11 @@
 		element: HTMLElement | null;
 	};
 
+	enum Direction {
+		ACROSS,
+		DOWN
+	}
+
 	// const solution: string[][] = [
 	// 	['T', 'A', 'B', '', ''],
 	// 	['I', 'T', 'E', 'M', ''],
@@ -38,6 +43,11 @@
 
 	let tiles: Tile[][] = [];
 	let mounted = false;
+	let isPointerDown = false;
+
+	$: {
+		console.log({ isClicking: isPointerDown });
+	}
 
 	onMount(() => {
 		let clueCount = 1;
@@ -61,12 +71,19 @@
 				};
 			})
 		);
+		window.addEventListener('pointerdown', () => {
+			isPointerDown = true;
+		});
+		window.addEventListener('pointerup', () => {
+			isPointerDown = false;
+		});
+
 		mounted = true;
 	});
 
 	let rowLength = solution.length;
 	let columnLength = solution[0].length;
-	let isDirectionDown = false;
+	let direction: Direction = Direction.ACROSS;
 
 	let focusRow = 0;
 	let focusCol = 0;
@@ -78,8 +95,10 @@
 				tile.focus();
 			}
 			let firstLetter, lastLetter;
-			tiles.forEach((row) => row.forEach((tile) => (tile.isCurrentWord = false)));
-			if (isDirectionDown) {
+			tiles
+				.filter((r) => r.filter((t) => t.isCurrentWord))
+				.forEach((row) => row.forEach((tile) => (tile.isCurrentWord = false)));
+			if (direction === Direction.DOWN) {
 				firstLetter = focusRow;
 				lastLetter = focusRow;
 				while (firstLetter > 0 && !tiles[firstLetter - 1][focusCol].isBlock) {
@@ -129,29 +148,29 @@
 
 		switch (key) {
 			case 'ARROWUP':
-				if (!isDirectionDown) {
-					isDirectionDown = true;
+				if (direction === Direction.ACROSS) {
+					direction = Direction.DOWN;
 				} else {
 					walkUp();
 				}
 				break;
 			case 'ARROWDOWN':
-				if (!isDirectionDown) {
-					isDirectionDown = true;
+				if (direction === Direction.ACROSS) {
+					direction = Direction.DOWN;
 				} else {
 					walkDown();
 				}
 				break;
 			case 'ARROWLEFT':
-				if (isDirectionDown) {
-					isDirectionDown = false;
+				if (direction === Direction.DOWN) {
+					direction = Direction.ACROSS;
 				} else {
 					walkLeft();
 				}
 				break;
 			case 'ARROWRIGHT':
-				if (isDirectionDown) {
-					isDirectionDown = false;
+				if (direction === Direction.DOWN) {
+					direction = Direction.ACROSS;
 				} else {
 					walkRight();
 				}
@@ -161,7 +180,7 @@
 					tiles[rowIndex][colIndex].guess = '';
 				} else {
 					clearNext = true;
-					if (isDirectionDown) {
+					if (direction === Direction.DOWN) {
 						walkUp();
 					} else {
 						walkLeft();
@@ -176,7 +195,7 @@
 		const isLetter = key.length === 1;
 		if (isLetter) {
 			tiles[rowIndex][colIndex].guess = key;
-			if (isDirectionDown) {
+			if (direction === Direction.DOWN) {
 				walkDown();
 			} else {
 				walkRight();
@@ -198,10 +217,29 @@
 		}
 	};
 
-	const onTileFocus = (rowIndex: number, colIndex: number) => {
-		if (rowIndex !== focusRow || colIndex !== focusCol) {
+	const updateFocus = (rowIndex: number, colIndex: number) => {
+		if (rowIndex !== focusRow) {
 			focusRow = rowIndex;
+		}
+		if (colIndex !== focusCol) {
 			focusCol = colIndex;
+		}
+	};
+
+	const onTileFocus = (rowIndex: number, colIndex: number) => {
+		if (!isPointerDown) {
+			updateFocus(rowIndex, colIndex);
+		}
+	};
+
+	const onTileClick = (ev: MouseEvent, tile: Tile, rowIndex: number, colIndex: number) => {
+		if (ev.button !== 0 || tile.isBlock) {
+			return;
+		}
+		if (rowIndex === focusRow && colIndex === focusCol) {
+			direction = direction === Direction.DOWN ? Direction.ACROSS : Direction.DOWN;
+		} else {
+			updateFocus(rowIndex, colIndex);
 		}
 	};
 </script>
@@ -227,6 +265,7 @@
 					on:focus={() => {
 						onTileFocus(rowIndex, colIndex);
 					}}
+					on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
 				>
 					{#if !tile.isBlock}
 						<span class="absolute pl-0.5 text-[0.75em] cursor-default select-none">
