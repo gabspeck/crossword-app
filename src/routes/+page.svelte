@@ -15,14 +15,7 @@
 		DOWN
 	}
 
-	// const solution: string[][] = [
-	// 	['T', 'A', 'B', '', ''],
-	// 	['I', 'T', 'E', 'M', ''],
-	// 	['F', 'E', 'R', 'A', 'L'],
-	// 	['F', 'U', 'R', 'R', 'Y'],
-	// 	['S', 'P', 'A', 'C', 'E']
-	// ];
-
+	// NYT September 2, 2024
 	const solution = [
 		['P', 'L', 'A', 'T', 'E', '', 'S', 'M', 'O', 'G', '', 'O', 'F', 'F', 'S'],
 		['A', 'I', 'S', 'H', 'A', '', 'T', 'A', 'C', 'O', '', 'A', 'L', 'L', 'A'],
@@ -45,24 +38,42 @@
 	let mounted = false;
 	let isPointerDown = false;
 
-	$: {
-		console.log({ isClicking: isPointerDown });
-	}
+	let cluesAcross: { clueNumber: number; row: number; col: number }[] = [];
+	let cluesDown: { clueNumber: number; row: number; col: number }[] = [];
 
 	onMount(() => {
 		let clueCount = 1;
 		tiles = solution.map((row, rowIndex) =>
 			row.map((solutionTile, colIndex) => {
 				const isBlock = solutionTile === '';
+				let clueNumber: number | null = null;
+
+				const startsAcross =
+					!isBlock &&
+					(colIndex === 0 || solution[rowIndex][colIndex - 1] === '') && // No block to the left
+					colIndex + 1 < columnLength &&
+					solution[rowIndex][colIndex + 1] !== ''; // Not a block to the right
+
+				const startsDown =
+					!isBlock &&
+					(rowIndex === 0 || solution[rowIndex - 1][colIndex] === '') && // No block above
+					rowIndex + 1 < rowLength &&
+					solution[rowIndex + 1][colIndex] !== ''; // Not a block below
+
+				if (startsAcross || startsDown) {
+					clueNumber = clueCount++;
+				}
+
+				if (startsAcross && clueNumber !== null) {
+					cluesAcross.push({ clueNumber, row: rowIndex, col: colIndex });
+				}
+
+				if (startsDown && clueNumber !== null) {
+					cluesDown.push({ clueNumber, row: rowIndex, col: colIndex });
+				}
+
 				return {
-					clueNumber:
-						!isBlock &&
-						(rowIndex === 0 ||
-							solution[rowIndex - 1][colIndex] === '' ||
-							colIndex === 0 ||
-							solution[rowIndex][colIndex - 1] === '')
-							? clueCount++
-							: null,
+					clueNumber,
 					solution: solutionTile,
 					guess: '',
 					isBlock,
@@ -71,19 +82,20 @@
 				};
 			})
 		);
+
 		const onPointerDown = () => {
 			isPointerDown = true;
-		}
+		};
 
 		const onPointerUp = () => {
 			isPointerDown = false;
-		}
+		};
 		window.addEventListener('pointerdown', onPointerDown);
-		window.addEventListener('pointerup', () => onPointerUp);
+		window.addEventListener('pointerup', onPointerUp);
 		mounted = true;
 		return () => {
-			window.removeEventListener('pointerup', onPointerUp)
-			window.removeEventListener('pointerdown', onPointerDown)
+			window.removeEventListener('pointerup', onPointerUp);
+			window.removeEventListener('pointerdown', onPointerDown);
 		};
 	});
 
@@ -93,6 +105,8 @@
 
 	let focusRow = 0;
 	let focusCol = 0;
+
+	let currentClueNumber: number | null = null;
 
 	$: {
 		if (mounted) {
@@ -123,11 +137,84 @@
 					tiles[focusRow][++lastLetter].isCurrentWord = true;
 				}
 			}
+
+			// Calculate the current clue number
+			currentClueNumber = (() => {
+				let row = focusRow;
+				let col = focusCol;
+
+				// If the focused tile is a block, there's no clue number
+				if (tiles[row][col].isBlock) {
+					return null;
+				}
+
+				// Traverse to the start of the word
+				if (direction === Direction.ACROSS) {
+					// Move left until we reach the start of the word
+					while (col > 0 && !tiles[row][col - 1].isBlock) {
+						col--;
+					}
+				} else {
+					// Direction.DOWN
+					// Move up until we reach the start of the word
+					while (row > 0 && !tiles[row - 1][col].isBlock) {
+						row--;
+					}
+				}
+
+				// Return the clue number of the starting tile
+				return tiles[row][col].clueNumber;
+			})();
 		}
 	}
 
 	const onTileKeyDown = (ev: KeyboardEvent, rowIndex: number, colIndex: number) => {
 		const key = ev.key.toUpperCase();
+
+		// Handle TAB and Shift+TAB
+		if (key === 'TAB') {
+			ev.preventDefault(); // Prevent default tab behavior
+
+			// Determine the clues array based on the current direction
+			const cluesArray = direction === Direction.ACROSS ? cluesAcross : cluesDown;
+
+			// Find the index of the current clue
+			let currentClueIndex = cluesArray.findIndex((clue) => clue.clueNumber === currentClueNumber);
+
+			// If currentClueNumber is null or not found, start from the beginning
+			if (currentClueIndex === -1) {
+				currentClueIndex = 0;
+			}
+
+			let nextClueIndex;
+
+			if (ev.shiftKey) {
+				// Shift+TAB: Move to the previous clue
+				nextClueIndex = currentClueIndex - 1;
+				if (nextClueIndex < 0) {
+					nextClueIndex = cluesArray.length - 1; // Wrap around to the last clue
+				}
+			} else {
+				// TAB: Move to the next clue
+				nextClueIndex = currentClueIndex + 1;
+				if (nextClueIndex >= cluesArray.length) {
+					nextClueIndex = 0; // Wrap around to the first clue
+				}
+			}
+
+			// Get the starting position of the next or previous clue
+			const nextClue = cluesArray[nextClueIndex];
+
+			// Update focusRow and focusCol to move to the starting tile of the next clue
+			focusRow = nextClue.row;
+			focusCol = nextClue.col;
+
+			// Ensure the tile is focused
+			tiles[focusRow][focusCol].element?.focus();
+
+			return; // Exit the function
+		}
+
 		if (key === 'BACKSPACE') {
 			ev.preventDefault();
 		}
@@ -251,40 +338,40 @@
 </script>
 
 <body>
-<div
-	role="grid"
-	class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
->
-	{#each tiles as row, rowIndex}
-		{#each row as tile, colIndex}
-			<div
-				role="gridcell"
-				on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
-				tabindex={tile.isBlock ? null : 0}
-				bind:this={tiles[rowIndex][colIndex].element}
-				class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
-				class:border-r-[1px]={colIndex < columnLength - 1}
-				class:border-b-[1px]={rowIndex < rowLength - 1}
-				class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
-				class:bg-[#A7D8FF]={tile.isCurrentWord}
-				class:bg-black={tile.isBlock}
-				on:focus={() => {
+	<div
+		role="grid"
+		class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
+	>
+		{#each tiles as row, rowIndex}
+			{#each row as tile, colIndex}
+				<div
+					role="gridcell"
+					on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
+					tabindex={tile.isBlock ? null : 0}
+					bind:this={tiles[rowIndex][colIndex].element}
+					class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
+					class:border-r-[1px]={colIndex < columnLength - 1}
+					class:border-b-[1px]={rowIndex < rowLength - 1}
+					class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
+					class:bg-[#A7D8FF]={tile.isCurrentWord}
+					class:bg-black={tile.isBlock}
+					on:focus={() => {
 						onTileFocus(rowIndex, colIndex);
 					}}
-				on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
-			>
-				{#if !tile.isBlock}
+					on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
+				>
+					{#if !tile.isBlock}
 						<span class="absolute pl-0.5 text-[0.75em] cursor-default select-none">
 							{tile.clueNumber || ''}
 						</span>
-					<div class="flex items-center justify-center w-full h-full">
+						<div class="flex items-center justify-center w-full h-full">
 							<span class="text-[1.6em] cursor-default select-none">
 								{tile.guess}
 							</span>
-					</div>
-				{/if}
-			</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
 		{/each}
-	{/each}
-</div>
+	</div>
 </body>
