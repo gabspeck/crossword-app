@@ -34,6 +34,93 @@
 		['S', 'T', 'Y', 'X', '', 'T', 'E', 'E', 'S', '', 'E', 'B', 'O', 'N', 'Y']
 	];
 
+	type Clue = Record<number, string>;
+
+	const clues: Record<Direction, Clue> = {
+		[Direction.ACROSS]: {
+			'1': 'Spinning item for a circus performer',
+			'6': 'Pollution portmanteau',
+			'10': 'Does in, in mob slang',
+			'14': 'Actress Hinds of "9-1-1"',
+			'15': 'Choco ___ (frozen treat with a rhyming name)',
+			'16': 'Penne ___ vodka',
+			'17': 'Song character who comes "down the bunny trail"',
+			'20': 'Revered star',
+			'21': 'Umpire\'s count after a ball and a strike',
+			'22': 'Museum in N.Y.C.\'s Central Park, with "the"',
+			'23': '"Makes sense"',
+			'25': 'Narrows at the end',
+			'27': 'Someone who says the same thing again and again, metaphorically',
+			'32': 'Engineered embankment',
+			'33': 'Kwik-E-Mart operator on "The Simpsons"',
+			'34': 'National law enforcement officers, with "the"',
+			'38': 'Dedicated poem',
+			'39': 'Stance',
+			'43': 'Slime',
+			'44': 'Gummy candy shape',
+			'46': 'U.S. 101 or 66: Abbr.',
+			'47': '"Bleeding Love" singer Lewis',
+			'49': 'One having an ice time at the Olympics?',
+			'53': 'Pop singer Grande',
+			'56': 'The "m" of e = mc^2',
+			'57': 'Sandoval of "Vanderpump Rules"',
+			'58': 'Rocky',
+			'61': 'Senate affirmatives',
+			'65': 'Short distance to travel, with a hint to 17-, 27- and 49-Across',
+			'68': 'City where the Nobel Peace Prize is awarded',
+			'69': 'Put in the mail',
+			'70': 'Kitchen gadget for apples',
+			'71': 'River to Hades',
+			'72': 'They may be graphic',
+			'73': 'Black wood'
+		},
+		[Direction.DOWN]: {
+			'1': 'Spanish "daddy"',
+			'2': 'Told a fib',
+			'3': 'Regarding',
+			'4': 'Others similar',
+			'5': 'Outsize feature of a bat\'s head',
+			'6': 'Pot smoker',
+			'7': 'Chess game\'s ending',
+			'8': 'Eight: Prefix',
+			'9': 'Hit the road, as a band',
+			'10': 'Nondairy milk option',
+			'11': 'Symbol in Tinder\'s logo',
+			'12': 'Frequent-___ miles',
+			'13': 'Seasons to taste, say',
+			'18': 'Director Joel or Ethan',
+			'19': 'Approach',
+			'24': 'Ooze',
+			'26': 'Common email attachment',
+			'27': 'What one might do after making a birthday wish',
+			'28': 'Second chance',
+			'29': 'Finished',
+			'30': 'Picky ___',
+			'31': 'PC "brain"',
+			'35': 'Showbiz awards quartet',
+			'36': 'Finished',
+			'37': 'Fly high',
+			'40': 'Musician in a cathedral',
+			'41': 'Letters between R and V',
+			'42': 'Lodge group since 1868',
+			'45': 'Advanced deg. for creative types',
+			'48': 'Gravy train gig',
+			'50': 'Alaska native',
+			'51': 'Corrects, as a text',
+			'52': 'What a beach shower helps wash off',
+			'53': 'One of the Three Musketeers',
+			'54': 'Pigeon\'s perch',
+			'55': 'Suggest indirectly',
+			'59': 'Fencing sword',
+			'60': 'Barn topper',
+			'62': 'Croatian currency beginning in 2023',
+			'63': '"___ to that!" ("Totally agree!")',
+			'64': 'Agile for one\'s age',
+			'66': 'Word after White or Red',
+			'67': 'Card above king'
+		}
+	};
+
 	let tiles: Tile[][] = [];
 	let mounted = false;
 	let isPointerDown = false;
@@ -106,7 +193,7 @@
 	let focusRow = 0;
 	let focusCol = 0;
 
-	let currentClueNumber: number | null = null;
+	let currentClueNumber: number = 1;
 
 	$: {
 		if (mounted) {
@@ -338,40 +425,43 @@
 </script>
 
 <body>
-	<div
-		role="grid"
-		class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
-	>
-		{#each tiles as row, rowIndex}
-			{#each row as tile, colIndex}
-				<div
-					role="gridcell"
-					on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
-					tabindex={tile.isBlock ? null : 0}
-					bind:this={tiles[rowIndex][colIndex].element}
-					class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
-					class:border-r-[1px]={colIndex < columnLength - 1}
-					class:border-b-[1px]={rowIndex < rowLength - 1}
-					class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
-					class:bg-[#A7D8FF]={tile.isCurrentWord}
-					class:bg-black={tile.isBlock}
-					on:focus={() => {
+<div
+	role="grid"
+	class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
+>
+	{#each tiles as row, rowIndex}
+		{#each row as tile, colIndex}
+			<div
+				role="gridcell"
+				on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
+				tabindex={tile.isBlock ? null : 0}
+				bind:this={tiles[rowIndex][colIndex].element}
+				class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
+				class:border-r-[1px]={colIndex < columnLength - 1}
+				class:border-b-[1px]={rowIndex < rowLength - 1}
+				class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
+				class:bg-[#A7D8FF]={tile.isCurrentWord}
+				class:bg-black={tile.isBlock}
+				on:focus={() => {
 						onTileFocus(rowIndex, colIndex);
 					}}
-					on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
-				>
-					{#if !tile.isBlock}
+				on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
+			>
+				{#if !tile.isBlock}
 						<span class="absolute pl-0.5 text-[0.75em] cursor-default select-none">
 							{tile.clueNumber || ''}
 						</span>
-						<div class="flex items-center justify-center w-full h-full">
+					<div class="flex items-center justify-center w-full h-full">
 							<span class="text-[1.6em] cursor-default select-none">
 								{tile.guess}
 							</span>
-						</div>
-					{/if}
-				</div>
-			{/each}
+					</div>
+				{/if}
+			</div>
 		{/each}
-	</div>
+	{/each}
+</div>
+<p>
+	<span>{currentClueNumber}. {clues[direction][currentClueNumber]}</span>
+</p>
 </body>
