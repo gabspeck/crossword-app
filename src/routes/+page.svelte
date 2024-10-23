@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	type Tile = {
 		solution: string;
@@ -10,10 +10,7 @@
 		element: HTMLElement | null;
 	};
 
-	enum Direction {
-		ACROSS,
-		DOWN
-	}
+	type Direction = 'ACROSS' | 'DOWN'
 
 	// NYT September 2, 2024
 	const solution = [
@@ -37,7 +34,7 @@
 	type Clue = Record<number, string>;
 
 	const clues: Record<Direction, Clue> = {
-		[Direction.ACROSS]: {
+		['ACROSS']: {
 			'1': 'Spinning item for a circus performer',
 			'6': 'Pollution portmanteau',
 			'10': 'Does in, in mob slang',
@@ -74,7 +71,7 @@
 			'72': 'They may be graphic',
 			'73': 'Black wood'
 		},
-		[Direction.DOWN]: {
+		['DOWN']: {
 			'1': 'Spanish "daddy"',
 			'2': 'Told a fib',
 			'3': 'Regarding',
@@ -121,12 +118,11 @@
 		}
 	};
 
-	let tiles: Tile[][] = [];
-	let mounted = false;
-	let isPointerDown = false;
+	let tiles: Tile[][] = $state([]);
+	let isPointerDown = $state(false);
 
-	let cluesAcross: { clueNumber: number; row: number; col: number }[] = [];
-	let cluesDown: { clueNumber: number; row: number; col: number }[] = [];
+	let cluesAcross: { clueNumber: number; row: number; col: number }[] = $state([]);
+	let cluesDown: { clueNumber: number; row: number; col: number }[] = $state([]);
 
 	onMount(() => {
 		let clueCount = 1;
@@ -179,81 +175,81 @@
 		};
 		window.addEventListener('pointerdown', onPointerDown);
 		window.addEventListener('pointerup', onPointerUp);
-		mounted = true;
 		return () => {
 			window.removeEventListener('pointerup', onPointerUp);
 			window.removeEventListener('pointerdown', onPointerDown);
 		};
 	});
 
-	let rowLength = solution.length;
-	let columnLength = solution[0].length;
-	let direction: Direction = Direction.ACROSS;
+	let rowLength = $state(solution.length);
+	let columnLength = $state(solution[0].length);
+	let direction: Direction = $state('ACROSS');
 
-	let focusRow = 0;
-	let focusCol = 0;
+	let focusRow = $state(0);
+	let focusCol = $state(0);
 
-	let currentClueNumber: number = 1;
+	let currentClueNumber: number = $state(1);
 
-	$: {
-		if (mounted) {
-			const tile = tiles[focusRow][focusCol].element;
-			if (tile && document.activeElement !== tile) {
-				tile.focus();
-			}
-			let firstLetter, lastLetter;
-			tiles
-				.filter((r) => r.filter((t) => t.isCurrentWord))
-				.forEach((row) => row.forEach((tile) => (tile.isCurrentWord = false)));
-			if (direction === Direction.DOWN) {
-				firstLetter = focusRow;
-				lastLetter = focusRow;
-				while (firstLetter > 0 && !tiles[firstLetter - 1][focusCol].isBlock) {
-					tiles[--firstLetter][focusCol].isCurrentWord = true;
-				}
-				while (lastLetter < rowLength - 1 && !tiles[lastLetter + 1][focusCol].isBlock) {
-					tiles[++lastLetter][focusCol].isCurrentWord = true;
-				}
-			} else {
-				firstLetter = focusCol;
-				lastLetter = focusCol;
-				while (firstLetter > 0 && !tiles[focusRow][firstLetter - 1].isBlock) {
-					tiles[focusRow][--firstLetter].isCurrentWord = true;
-				}
-				while (lastLetter < columnLength - 1 && !tiles[focusRow][lastLetter + 1].isBlock) {
-					tiles[focusRow][++lastLetter].isCurrentWord = true;
-				}
-			}
-
-			// Calculate the current clue number
-			currentClueNumber = (() => {
-				let row = focusRow;
-				let col = focusCol;
-
-				// If the focused tile is a block, there's no clue number
-				if (tiles[row][col].isBlock) {
-					return null;
-				}
-
-				// Traverse to the start of the word
-				if (direction === Direction.ACROSS) {
-					// Move left until we reach the start of the word
-					while (col > 0 && !tiles[row][col - 1].isBlock) {
-						col--;
-					}
-				} else {
-					// Direction.DOWN
-					// Move up until we reach the start of the word
-					while (row > 0 && !tiles[row - 1][col].isBlock) {
-						row--;
-					}
-				}
-
-				// Return the clue number of the starting tile
-				return tiles[row][col].clueNumber;
-			})();
+	$effect(() => {
+		const tile = tiles[focusRow][focusCol].element;
+		if (tile && document.activeElement !== tile) {
+			tile.focus();
 		}
-	}
+		tiles
+			.filter((r) => r.filter((t) => t.isCurrentWord))
+			.forEach((row) => row.forEach((tile) => (tile.isCurrentWord = false)));
+	});
+
+	$effect(() => {
+		let firstLetter, lastLetter;
+		if (direction === 'DOWN') {
+			firstLetter = focusRow;
+			lastLetter = focusRow;
+			while (firstLetter > 0 && !tiles[firstLetter - 1][focusCol].isBlock) {
+				tiles[--firstLetter][focusCol].isCurrentWord = true;
+			}
+			while (lastLetter < rowLength - 1 && !tiles[lastLetter + 1][focusCol].isBlock) {
+				tiles[++lastLetter][focusCol].isCurrentWord = true;
+			}
+		} else {
+			firstLetter = focusCol;
+			lastLetter = focusCol;
+			while (firstLetter > 0 && !tiles[focusRow][firstLetter - 1].isBlock) {
+				tiles[focusRow][--firstLetter].isCurrentWord = true;
+			}
+			while (lastLetter < columnLength - 1 && !tiles[focusRow][lastLetter + 1].isBlock) {
+				tiles[focusRow][++lastLetter].isCurrentWord = true;
+			}
+		}
+	});
+	//
+	// 	// Calculate the current clue number
+	// 	currentClueNumber = (() => {
+	// 		let row = focusRow;
+	// 		let col = focusCol;
+	//
+	// 		// If the focused tile is a block, there's no clue number
+	// 		if (tiles[row][col].isBlock) {
+	// 			return 1;
+	// 		}
+	//
+	// 		// Traverse to the start of the word
+	// 		if (direction === 'ACROSS') {
+	// 			// Move left until we reach the start of the word
+	// 			while (col > 0 && !tiles[row][col - 1].isBlock) {
+	// 				col--;
+	// 			}
+	// 		} else {
+	// 			// 'DOWN'
+	// 			// Move up until we reach the start of the word
+	// 			while (row > 0 && !tiles[row - 1][col].isBlock) {
+	// 				row--;
+	// 			}
+	// 		}
+	//
+	// 		// Return the clue number of the starting tile
+	// 		return tiles[row][col].clueNumber || 1;
+	// 	})();
 
 	const onTileKeyDown = (ev: KeyboardEvent, rowIndex: number, colIndex: number) => {
 		const key = ev.key.toUpperCase();
@@ -263,7 +259,7 @@
 			ev.preventDefault(); // Prevent default tab behavior
 
 			// Determine the clues array based on the current direction
-			const cluesArray = direction === Direction.ACROSS ? cluesAcross : cluesDown;
+			const cluesArray = direction === 'ACROSS' ? cluesAcross : cluesDown;
 
 			// Find the index of the current clue
 			let currentClueIndex = cluesArray.findIndex((clue) => clue.clueNumber === currentClueNumber);
@@ -328,29 +324,29 @@
 
 		switch (key) {
 			case 'ARROWUP':
-				if (direction === Direction.ACROSS) {
-					direction = Direction.DOWN;
+				if (direction === 'ACROSS') {
+					direction = 'DOWN';
 				} else {
 					walkUp();
 				}
 				break;
 			case 'ARROWDOWN':
-				if (direction === Direction.ACROSS) {
-					direction = Direction.DOWN;
+				if (direction === 'ACROSS') {
+					direction = 'DOWN';
 				} else {
 					walkDown();
 				}
 				break;
 			case 'ARROWLEFT':
-				if (direction === Direction.DOWN) {
-					direction = Direction.ACROSS;
+				if (direction === 'DOWN') {
+					direction = 'ACROSS';
 				} else {
 					walkLeft();
 				}
 				break;
 			case 'ARROWRIGHT':
-				if (direction === Direction.DOWN) {
-					direction = Direction.ACROSS;
+				if (direction === 'DOWN') {
+					direction = 'ACROSS';
 				} else {
 					walkRight();
 				}
@@ -360,7 +356,7 @@
 					tiles[rowIndex][colIndex].guess = '';
 				} else {
 					clearNext = true;
-					if (direction === Direction.DOWN) {
+					if (direction === 'DOWN') {
 						walkUp();
 					} else {
 						walkLeft();
@@ -375,7 +371,7 @@
 		const isLetter = key.length === 1;
 		if (isLetter) {
 			tiles[rowIndex][colIndex].guess = key;
-			if (direction === Direction.DOWN) {
+			if (direction === 'DOWN') {
 				walkDown();
 			} else {
 				walkRight();
@@ -417,14 +413,13 @@
 			return;
 		}
 		if (rowIndex === focusRow && colIndex === focusCol) {
-			direction = direction === Direction.DOWN ? Direction.ACROSS : Direction.DOWN;
+			direction = direction === 'DOWN' ? 'ACROSS' : 'DOWN';
 		} else {
 			updateFocus(rowIndex, colIndex);
 		}
 	};
 </script>
 
-<body>
 <div
 	role="grid"
 	class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
@@ -433,28 +428,30 @@
 		{#each row as tile, colIndex}
 			<div
 				role="gridcell"
-				on:keydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
+				onkeydown={(ev) => onTileKeyDown(ev, rowIndex, colIndex)}
 				tabindex={tile.isBlock ? null : 0}
 				bind:this={tiles[rowIndex][colIndex].element}
-				class="border-[#696969] w-[3em] h-[3em] focus:outline-none"
+				class="border-[#696969] w-[33px] h-[33px] focus:outline-none relative"
 				class:border-r-[1px]={colIndex < columnLength - 1}
 				class:border-b-[1px]={rowIndex < rowLength - 1}
 				class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
 				class:bg-[#A7D8FF]={tile.isCurrentWord}
 				class:bg-black={tile.isBlock}
-				on:focus={() => {
+				onfocus={() => {
 						onTileFocus(rowIndex, colIndex);
 					}}
-				on:click={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
+				onclick={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
 			>
 				{#if !tile.isBlock}
-						<span class="absolute pl-0.5 text-[0.75em] cursor-default select-none">
+					<div class="cursor-default absolute top-[-3px] left-0.5 select-none">
+						<p class="text-[0.75em]">
 							{tile.clueNumber || ''}
-						</span>
-					<div class="flex items-center justify-center w-full h-full">
-							<span class="text-[1.6em] cursor-default select-none">
+						</p>
+					</div>
+					<div class="flex items-center justify-center w-full h-full absolute top-1">
+							<p class="text-[22px] cursor-default select-none">
 								{tile.guess}
-							</span>
+							</p>
 					</div>
 				{/if}
 			</div>
@@ -464,4 +461,3 @@
 <p>
 	<span>{currentClueNumber}. {clues[direction][currentClueNumber]}</span>
 </p>
-</body>
