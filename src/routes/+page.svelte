@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 
 	type Direction = 'across' | 'down'
 
@@ -10,42 +9,27 @@
 		end: number
 	}
 
-	type PuzzleTile =
-		| {
-		isBlank: true
-	} | {
-		isBlank?: false
-		label?: string
-		answer: string
+	type BlankTile = { isBlank: true }
+	type AnswerTile = { isBlank?: false, label?: string, answer: string }
+
+	type Tile = | BlankTile | AnswerTile
+
+	type GridTile = | BlankTile | AnswerTile & {
+		guess: string,
+		focused: boolean
+		clueIndex: { [d in Direction]: number }
 	}
+
+	type NonBlankTile = Exclude<GridTile, BlankTile>
 
 	type Puzzle = {
 		cols: number,
 		rows: number,
 		clues: { [d in Direction]: Clue[] },
-		tiles: PuzzleTile[]
+		tiles: Tile[]
 	}
 
-
-	const solution = [
-		['P', 'L', 'A', 'T', 'E', '', 'S', 'M', 'O', 'G', '', 'O', 'F', 'F', 'S'],
-		['A', 'I', 'S', 'H', 'A', '', 'T', 'A', 'C', 'O', '', 'A', 'L', 'L', 'A'],
-		['P', 'E', 'T', 'E', 'R', 'C', 'O', 'T', 'T', 'O', 'N', 'T', 'A', 'I', 'L'],
-		['I', 'D', 'O', 'L', '', 'O', 'N', 'E', 'O', 'N', 'E', '', 'M', 'E', 'T'],
-		['', '', '', 'I', 'S', 'E', 'E', '', '', 'T', 'A', 'P', 'E', 'R', 'S'],
-		['B', 'R', 'O', 'K', 'E', 'N', 'R', 'E', 'C', 'O', 'R', 'D', '', '', ''],
-		['L', 'E', 'V', 'E', 'E', '', '', 'A', 'P', 'U', '', 'F', 'E', 'D', 'S'],
-		['O', 'D', 'E', '', 'P', 'O', 'S', 'T', 'U', 'R', 'E', '', 'G', 'O', 'O'],
-		['W', 'O', 'R', 'M', '', 'R', 'T', 'E', '', '', 'L', 'E', 'O', 'N', 'A'],
-		['', '', '', 'F', 'I', 'G', 'U', 'R', 'E', 'S', 'K', 'A', 'T', 'E', 'R'],
-		['A', 'R', 'I', 'A', 'N', 'A', '', '', 'M', 'A', 'S', 'S', '', '', ''],
-		['T', 'O', 'M', '', 'U', 'N', 'E', 'V', 'E', 'N', '', 'Y', 'E', 'A', 'S'],
-		['H', 'O', 'P', 'S', 'K', 'I', 'P', 'A', 'N', 'D', 'A', 'J', 'U', 'M', 'P'],
-		['O', 'S', 'L', 'O', '', 'S', 'E', 'N', 'D', '', 'C', 'O', 'R', 'E', 'R'],
-		['S', 'T', 'Y', 'X', '', 'T', 'E', 'E', 'S', '', 'E', 'B', 'O', 'N', 'Y']
-	];
-
-	const puzzle: Puzzle = {
+	let puzzle: Puzzle = {
 		cols: 15,
 		rows: 15,
 		clues: {
@@ -132,120 +116,852 @@
 				{ number: 67, prompt: 'Card above king', start: 213, end: 228 }
 			]
 		},
-		tiles: (() => {
-			let clueCount = 1;
-			return solution.flatMap<PuzzleTile>((row, rowIdx, arr) => {
-				return row.map<PuzzleTile>((tile, colIdx) => {
-					if (tile === '') {
-						return { isBlank: true };
-					}
-					const label = (rowIdx === 0 || colIdx === 0) || (arr[rowIdx - 1][colIdx] === '' || arr[rowIdx][colIdx - 1] === '') ? (clueCount++).toString() : null;
-					return {
-						...(label ? { label } : {}),
-						answer: tile
-					};
-				});
-			});
-		})()
+		tiles:
+			[
+				{
+					label: '1',
+					answer: 'P'
+				},
+				{
+					label: '2',
+					answer: 'L'
+				},
+				{
+					label: '3',
+					answer: 'A'
+				},
+				{
+					label: '4',
+					answer: 'T'
+				},
+				{
+					label: '5',
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '6',
+					answer: 'S'
+				},
+				{
+					label: '7',
+					answer: 'M'
+				},
+				{
+					label: '8',
+					answer: 'O'
+				},
+				{
+					label: '9',
+					answer: 'G'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '10',
+					answer: 'O'
+				},
+				{
+					label: '11',
+					answer: 'F'
+				},
+				{
+					label: '12',
+					answer: 'F'
+				},
+				{
+					label: '13',
+					answer: 'S'
+				},
+				{
+					label: '14',
+					answer: 'A'
+				},
+				{
+					answer: 'I'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					answer: 'H'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '15',
+					answer: 'T'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'C'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '16',
+					answer: 'A'
+				},
+				{
+					answer: 'L'
+				},
+				{
+					answer: 'L'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					label: '17',
+					answer: 'P'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '18',
+					answer: 'C'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					label: '19',
+					answer: 'N'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'I'
+				},
+				{
+					answer: 'L'
+				},
+				{
+					label: '20',
+					answer: 'I'
+				},
+				{
+					answer: 'D'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'L'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '21',
+					answer: 'O'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '22',
+					answer: 'M'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '23',
+					answer: 'I'
+				},
+				{
+					label: '24',
+					answer: 'S'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '25',
+					answer: 'T'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					label: '26',
+					answer: 'P'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					label: '27',
+					answer: 'B'
+				},
+				{
+					label: '28',
+					answer: 'R'
+				},
+				{
+					label: '29',
+					answer: 'O'
+				},
+				{
+					answer: 'K'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '30',
+					answer: 'E'
+				},
+				{
+					label: '31',
+					answer: 'C'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					answer: 'D'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '32',
+					answer: 'L'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'V'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '33',
+					answer: 'A'
+				},
+				{
+					answer: 'P'
+				},
+				{
+					answer: 'U'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '34',
+					answer: 'F'
+				},
+				{
+					label: '35',
+					answer: 'E'
+				},
+				{
+					label: '36',
+					answer: 'D'
+				},
+				{
+					label: '37',
+					answer: 'S'
+				},
+				{
+					label: '38',
+					answer: 'O'
+				},
+				{
+					answer: 'D'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '39',
+					answer: 'P'
+				},
+				{
+					label: '40',
+					answer: 'O'
+				},
+				{
+					label: '41',
+					answer: 'S'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'U'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '42',
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '43',
+					answer: 'G'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					label: '44',
+					answer: 'W'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '45',
+					answer: 'M'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '46',
+					answer: 'R'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '47',
+					answer: 'L'
+				},
+				{
+					label: '48',
+					answer: 'E'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '49',
+					answer: 'F'
+				},
+				{
+					label: '50',
+					answer: 'I'
+				},
+				{
+					answer: 'G'
+				},
+				{
+					answer: 'U'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '51',
+					answer: 'E'
+				},
+				{
+					label: '52',
+					answer: 'S'
+				},
+				{
+					answer: 'K'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '53',
+					answer: 'A'
+				},
+				{
+					label: '54',
+					answer: 'R'
+				},
+				{
+					label: '55',
+					answer: 'I'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '56',
+					answer: 'M'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '57',
+					answer: 'T'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'M'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '58',
+					answer: 'U'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					label: '59',
+					answer: 'E'
+				},
+				{
+					label: '60',
+					answer: 'V'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '61',
+					answer: 'Y'
+				},
+				{
+					label: '62',
+					answer: 'E'
+				},
+				{
+					label: '63',
+					answer: 'A'
+				},
+				{
+					label: '64',
+					answer: 'S'
+				},
+				{
+					label: '65',
+					answer: 'H'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'P'
+				},
+				{
+					label: '66',
+					answer: 'S'
+				},
+				{
+					answer: 'K'
+				},
+				{
+					answer: 'I'
+				},
+				{
+					answer: 'P'
+				},
+				{
+					answer: 'A'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'D'
+				},
+				{
+					label: '67',
+					answer: 'A'
+				},
+				{
+					answer: 'J'
+				},
+				{
+					answer: 'U'
+				},
+				{
+					answer: 'M'
+				},
+				{
+					answer: 'P'
+				},
+				{
+					label: '68',
+					answer: 'O'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					answer: 'L'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '69',
+					answer: 'S'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'D'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '70',
+					answer: 'C'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'R'
+				},
+				{
+					label: '71',
+					answer: 'S'
+				},
+				{
+					answer: 'T'
+				},
+				{
+					answer: 'Y'
+				},
+				{
+					answer: 'X'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '72',
+					answer: 'T'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'E'
+				},
+				{
+					answer: 'S'
+				},
+				{
+					isBlank: true
+				},
+				{
+					label: '73',
+					answer: 'E'
+				},
+				{
+					answer: 'B'
+				},
+				{
+					answer: 'O'
+				},
+				{
+					answer: 'N'
+				},
+				{
+					answer: 'Y'
+				}
+			]
 	};
-	console.log(JSON.stringify(puzzle));
-	// NYT September 2, 2024
-	const { tiles, rows, cols } = puzzle;
 
-	// Group the tiles into rows based on the number of columns (cols)
-	const grid: PuzzleTile[][] = [];
-	for (let row = 0; row < rows; row++) {
-		const start = row * cols;
-		const end = start + cols;
-		grid.push(tiles.slice(start, end));
-	}
+	$inspect(puzzle);
 
-	let isPointerDown = $state(false);
+	let tiles: GridTile[] = $state(puzzle.tiles.map((t, tileIndex) => {
 
-	onMount(() => {
-		const onPointerDown = () => {
-			isPointerDown = true;
+		return {
+			...t,
+			guess: '',
+			focused: false,
+			clueIndex: {
+				across: puzzle.clues.across.findIndex(c => c.start <= tileIndex && c.end >= tileIndex),
+				down: puzzle.clues.down.findIndex(c => {
+					for (let i = c.start; i <= c.end; i += puzzle.cols) {
+						if (i === tileIndex) {
+							return true;
+						}
+					}
+					return false;
+				})
+			}
 		};
+	}));
 
-		const onPointerUp = () => {
-			isPointerDown = false;
-		};
-		window.addEventListener('pointerdown', onPointerDown);
-		window.addEventListener('pointerup', onPointerUp);
-		return () => {
-			window.removeEventListener('pointerup', onPointerUp);
-			window.removeEventListener('pointerdown', onPointerDown);
-		};
+	let currentDirection: Direction = $state('across');
+	let currentClue: Clue = $state(puzzle.clues.across[0]);
+	$inspect(currentClue)
+	let currentTile: NonBlankTile = $state(tiles[puzzle.clues.across[0].start] as NonBlankTile);
+
+	$effect(() => {
+		if (!currentTile.focused) {
+			currentTile.focused = true;
+		}
 	});
 
-	let rowLength = puzzle.rows;
-	let columnLength = puzzle.cols;
-	let direction: Direction = $state('across');
-
-	let focusRow = $state(0);
-	let focusCol = $state(0);
-
-	const updateFocus = (rowIndex: number, colIndex: number) => {
-		if (rowIndex !== focusRow) {
-			focusRow = rowIndex;
+	$effect(() => {
+		const tileClue = puzzle.clues[currentDirection][currentTile.clueIndex[currentDirection]];
+		if (tileClue.end !== currentClue.end) {
+			currentClue = tileClue;
 		}
-		if (colIndex !== focusCol) {
-			focusCol = colIndex;
-		}
-	};
+	});
 
-	const onTileFocus = (rowIndex: number, colIndex: number) => {
-		if (!isPointerDown) {
-			updateFocus(rowIndex, colIndex);
+
+	const setCurrentTile = (tile: NonBlankTile) => {
+		if (tile !== currentTile) {
+			currentTile.focused = false;
+			currentTile = tile;
 		}
 	};
 
-	const onTileClick = (ev: MouseEvent, tile: PuzzleTile, rowIndex: number, colIndex: number) => {
-		if (ev.button !== 0 || tile.isBlank) {
-			return;
-		}
-		if (rowIndex === focusRow && colIndex === focusCol) {
-			direction = direction === 'down' ? 'across' : 'down';
+	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
+		tile.guess = ev.key.toUpperCase();
+	};
+
+	const onTileClick = ({ currentTarget: tile }: MouseEvent & { currentTarget: HTMLDivElement }) => {
+		if (tile !== document.activeElement) {
+			tile.focus();
 		} else {
-			updateFocus(rowIndex, colIndex);
+			currentDirection = currentDirection === 'across' ? 'down' : 'across';
 		}
 	};
+
 </script>
 
-<div
-	role="grid"
-	class="inline-grid grid-cols-{columnLength} gap-0 border-[3px] border-black font-['Helvetica']"
->
-	{#each grid as row, rowIndex}
-		{#each row as tile, colIndex}
+<main>
+	<div
+		tabindex="-1"
+		role="grid"
+		class="inline-grid grid-cols-{puzzle.cols} gap-0 border-[3px] border-black font-['Helvetica']"
+	>
+		{#each tiles as tile}
 			<div
-				role="gridcell"
-				onkeydown={(ev) => {}}
 				tabindex={tile.isBlank ? null : 0}
-				class="border-[#696969] w-[33px] h-[33px] focus:outline-none relative"
-				class:border-r-[1px]={colIndex < columnLength - 1}
-				class:border-b-[1px]={rowIndex < rowLength - 1}
-				class:bg-[#FFDA00]={focusRow === rowIndex && focusCol === colIndex}
+				role="gridcell"
+				class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
+				class:bg-[#FFDA00]={!tile.isBlank && tile.focused}
 				class:bg-[#A7D8FF]={false}
 				class:bg-black={tile.isBlank}
-				onfocus={() => {
-						onTileFocus(rowIndex, colIndex);
-					}}
-				onclick={(ev) => onTileClick(ev, tile, rowIndex, colIndex)}
-			>
+				onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
+				onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
+				onclick={tile.isBlank ? null : onTileClick}
+				onfocus={tile.isBlank ? null : () => {setCurrentTile(tile)}}>
 				{#if !tile.isBlank}
-					<div class="cursor-default absolute top-[-3px] left-0.5 select-none">
+					<div class="absolute top-[-1px] left-0.5 select-none">
 						<p class="text-[0.75em]">
 							{tile.label}
 						</p>
 					</div>
 					<div class="flex justify-center w-full h-full absolute top-1">
 						<p class="text-[22px] cursor-default select-none">
-							{tile.answer}
+							{tile.guess}
 						</p>
 					</div>
 				{/if}
 			</div>
 		{/each}
-	{/each}
-</div>
+	</div>
+</main>
