@@ -18,20 +18,54 @@
 	}));
 
 	let currentDirection: Direction = $state('across');
-	let currentTileIndex: number = $state(puzzle.clues.across[0].tiles[0]);
+	let currentTileIndex: number = $state(puzzle.clues[0].tiles[0]);
+	$inspect(currentTileIndex);
 	let currentTile: NonBlankTile = $derived(puzzle.tiles[currentTileIndex]) as NonBlankTile;
-	let currentClue: Clue = $derived(puzzle.clues[currentDirection][currentTile.clues[currentDirection]]);
+	let currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
 		const key = ev.key.toUpperCase();
 		if (key.length === 1) {
 			tile.guess = key.toUpperCase();
+			advanceTile();
 		} else {
 			if (key === 'TAB') {
-				while(!currentTile.isBlank) {
-					currentTileIndex++;
+				ev.preventDefault();
+				advanceClue(ev.shiftKey ? -1 : 1);
+			}
+			if (key === 'DELETE') {
+				if (tile.guess) {
+					tile.guess = '';
 				}
 			}
+			if (key === 'BACKSPACE') {
+				if (tile.guess) {
+					tile.guess = '';
+				} else {
+					if (tile.guess) {
+						tile.guess = '';
+					} else {
+						const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
+						if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
+							tiles[prevTileIndex].guess = '';
+							currentTileIndex = prevTileIndex;
+						}
+					}
+				}
+			}
+			if (['ARROWUP', 'ARROWDOWN'].includes(key) && currentDirection === 'across') {
+				ev.preventDefault();
+				currentDirection = 'down';
+			} else if (currentDirection === 'down') {
+				currentTileIndex += puzzle.dimensions.rows * (key === 'ARROWUP' ? -1 : 1);
+			}
+			if (['ARROWLEFT', 'ARROWRIGHT'].includes(key) && currentDirection === 'down') {
+				ev.preventDefault();
+				currentDirection = 'across';
+			} else if (currentDirection === 'across') {
+				currentTileIndex += 1 * (key === 'ARROWLEFT' ? -1 : 1);
+			}
+
 		}
 	};
 
@@ -43,6 +77,22 @@
 		}
 	};
 
+	const advanceClue = (step: 1 | -1) => {
+		let nextClueIndex = (currentTile.clues[currentDirection] + step) % puzzle.clues.length;
+		if (nextClueIndex < 0) {
+			nextClueIndex = puzzle.clues.findLastIndex(c => c.direction === (currentDirection === 'across' ? 'down' : 'down'));
+		}
+		const nextClue = puzzle.clues[nextClueIndex];
+		if (nextClue.direction !== currentDirection) {
+			currentDirection = nextClue.direction;
+		}
+		currentTileIndex = nextClue.tiles[0];
+	};
+
+	const advanceTile = () => {
+		const step = currentDirection === 'across' ? 1 : puzzle.dimensions.rows;
+		let nextTileIndex = currentTileIndex + step;
+	};
 </script>
 
 <main>
