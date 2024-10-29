@@ -2,9 +2,12 @@
 
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
 
-	type GridTile = | BlankTile | AnswerTile & {
-		guess: string,
-	}
+	type GridTile = (| BlankTile | AnswerTile & {
+		guess: string
+	}) &
+		{
+			element: HTMLElement | null;
+		}
 
 	type NonBlankTile = Exclude<GridTile, BlankTile>
 
@@ -13,32 +16,35 @@
 	let tiles: GridTile[] = $state(puzzle.tiles.map((t) => {
 		return {
 			...t,
-			guess: ''
+			guess: '',
+			element: null
 		};
 	}));
 
 	let currentDirection: Direction = $state('across');
 	let currentTileIndex: number = $state(puzzle.clues[0].tiles[0]);
-	$inspect(currentTileIndex);
-	let currentTile: NonBlankTile = $derived(puzzle.tiles[currentTileIndex]) as NonBlankTile;
+	let currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	let currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
+
+	$inspect(currentTileIndex)
+
+	$effect(() => {
+		currentTile.element?.focus();
+	});
 
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
 		const key = ev.key.toUpperCase();
-		if (key.length === 1) {
-			tile.guess = key.toUpperCase();
-			advanceTile();
-		} else {
-			if (key === 'TAB') {
+		switch (key) {
+			case 'TAB':
 				ev.preventDefault();
 				advanceClue(ev.shiftKey ? -1 : 1);
-			}
-			if (key === 'DELETE') {
+				break;
+			case 'DELETE':
 				if (tile.guess) {
 					tile.guess = '';
 				}
-			}
-			if (key === 'BACKSPACE') {
+				break;
+			case 'BACKSPACE':
 				if (tile.guess) {
 					tile.guess = '';
 				} else {
@@ -52,20 +58,31 @@
 						}
 					}
 				}
-			}
-			if (['ARROWUP', 'ARROWDOWN'].includes(key) && currentDirection === 'across') {
-				ev.preventDefault();
-				currentDirection = 'down';
-			} else if (currentDirection === 'down') {
-				currentTileIndex += puzzle.dimensions.rows * (key === 'ARROWUP' ? -1 : 1);
-			}
-			if (['ARROWLEFT', 'ARROWRIGHT'].includes(key) && currentDirection === 'down') {
-				ev.preventDefault();
-				currentDirection = 'across';
-			} else if (currentDirection === 'across') {
-				currentTileIndex += 1 * (key === 'ARROWLEFT' ? -1 : 1);
-			}
-
+				break;
+			case 'ARROWUP':
+			case 'ARROWDOWN':
+				if (currentDirection === 'across') {
+					ev.preventDefault();
+					currentDirection = 'down';
+				} else {
+					advanceTile(key === 'ARROWUP' ? 'up' : 'down');
+				}
+				break;
+			case 'ARROWLEFT':
+			case 'ARROWRIGHT':
+				if (currentDirection === 'down') {
+					ev.preventDefault();
+					currentDirection = 'across';
+				} else {
+					advanceTile(key === 'ARROWLEFT' ? 'left' : 'right');
+				}
+				break;
+			default:
+				if (key.length === 1) {
+					tile.guess = key.toUpperCase().trim();
+					advanceTile(currentDirection === 'across' ? 'right' : 'down');
+				}
+				break;
 		}
 	};
 
@@ -89,9 +106,45 @@
 		currentTileIndex = nextClue.tiles[0];
 	};
 
-	const advanceTile = () => {
-		const step = currentDirection === 'across' ? 1 : puzzle.dimensions.rows;
-		let nextTileIndex = currentTileIndex + step;
+	const advanceTile = (direction: 'up' | 'down' | 'left' | 'right') => {
+		const { cols } = puzzle.dimensions;
+		const step = {
+			'up': -cols,
+			'down': cols,
+			'left': -1,
+			'right': 1
+		}[direction];
+
+		const currentRowIndex = Math.floor(currentTileIndex / cols);
+		const currentColIndex = currentTileIndex % cols;
+
+		let tentativeTileIndex = currentTileIndex;
+
+		while (true) {
+			tentativeTileIndex += step;
+
+			if (tentativeTileIndex < 0 || tentativeTileIndex >= tiles.length) {
+				break;
+			}
+
+			const tentativeRowIndex = Math.floor(tentativeTileIndex / cols);
+			const tentativeColIndex = tentativeTileIndex % cols;
+
+			if ((direction === 'left' || direction === 'right') && tentativeRowIndex !== currentRowIndex) {
+				break;
+			}
+
+			if ((direction === 'up' || direction === 'down') && tentativeColIndex !== currentColIndex) {
+				break; // Next tile is in a different column
+			}
+
+			const nextTile = tiles[tentativeTileIndex];
+
+			if (!nextTile.isBlank) {
+				currentTileIndex = tentativeTileIndex;
+				break;
+			}
+		}
 	};
 </script>
 
@@ -103,6 +156,7 @@
 	>
 		{#each tiles as tile, tileIndex}
 			<div
+				bind:this={tile.element}
 				tabindex={tile.isBlank ? null : 0}
 				role="gridcell"
 				class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
@@ -112,7 +166,7 @@
 				onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
 				onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
 				onclick={tile.isBlank ? null : onTileClick}
-				onfocus={tile.isBlank ? null : () => {currentTileIndex = tileIndex}}>
+				onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
 				{#if !tile.isBlank}
 					<div class="absolute top-[-1px] left-0.5 select-none">
 						<p class="text-[0.75em]">
