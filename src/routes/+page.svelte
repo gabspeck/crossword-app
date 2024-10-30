@@ -23,6 +23,9 @@
 
 	let currentDirection: Direction = $state('across');
 	let currentTileIndex: number = $state(puzzle.clues[0].tiles[0]);
+	let currentRowIndex = $derived(Math.floor(currentTileIndex / puzzle.dimensions.cols));
+	let currentColIndex = $derived(currentTileIndex % puzzle.dimensions.cols);
+
 	let currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	let currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 
@@ -45,7 +48,7 @@
 			case 'BACKSPACE':
 				if (tile.guess) {
 					tile.guess = '';
-				} else {
+				} else if (currentColIndex > 0){
 					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
 					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
 						tiles[prevTileIndex].guess = '';
@@ -115,9 +118,6 @@
 			'left': -1,
 			'right': 1
 		}[direction];
-
-		const currentRowIndex = Math.floor(currentTileIndex / cols);
-		const currentColIndex = currentTileIndex % cols;
 
 		let tentativeTileIndex = currentTileIndex;
 
