@@ -26,8 +26,6 @@
 	let currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	let currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 
-	$inspect(currentTileIndex)
-
 	$effect(() => {
 		currentTile.element?.focus();
 	});
@@ -80,7 +78,14 @@
 			default:
 				if (key.length === 1) {
 					tile.guess = key.toUpperCase().trim();
-					advanceTile(currentDirection === 'across' ? 'right' : 'down');
+					if (currentTileIndex === currentClue.tiles.at(-1)) {
+						const firstEmpty = firstEmptyTileInClue(currentClue);
+						if (firstEmpty != undefined) {
+							currentTileIndex = firstEmpty;
+						}
+					} else {
+						advanceTile(currentDirection === 'across' ? 'right' : 'down');
+					}
 				}
 				break;
 		}
@@ -103,7 +108,7 @@
 		if (nextClue.direction !== currentDirection) {
 			currentDirection = nextClue.direction;
 		}
-		currentTileIndex = nextClue.tiles[0];
+		currentTileIndex = firstEmptyTileInClue(nextClue) || nextClue.tiles[0];
 	};
 
 	const advanceTile = (direction: 'up' | 'down' | 'left' | 'right') => {
@@ -146,6 +151,9 @@
 			}
 		}
 	};
+
+	const firstEmptyTileInClue = (clue: Clue) =>
+		clue.tiles.find(idx => (tiles[idx] as NonBlankTile).guess === '');
 </script>
 
 <main>
