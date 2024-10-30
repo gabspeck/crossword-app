@@ -46,14 +46,10 @@
 				if (tile.guess) {
 					tile.guess = '';
 				} else {
-					if (tile.guess) {
-						tile.guess = '';
-					} else {
-						const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
-						if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
-							tiles[prevTileIndex].guess = '';
-							currentTileIndex = prevTileIndex;
-						}
+					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
+					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
+						tiles[prevTileIndex].guess = '';
+						currentTileIndex = prevTileIndex;
 					}
 				}
 				break;
