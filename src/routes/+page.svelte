@@ -1,6 +1,7 @@
 <script lang="ts">
 
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
+	import { onMount } from 'svelte';
 
 	type GridTile = (| BlankTile | AnswerTile & {
 		guess: string
@@ -23,14 +24,24 @@
 
 	let currentDirection: Direction = $state('across');
 	let currentTileIndex: number = $state(puzzle.clues[0].tiles[0]);
-	let currentRowIndex = $derived(Math.floor(currentTileIndex / puzzle.dimensions.cols));
-	let currentColIndex = $derived(currentTileIndex % puzzle.dimensions.cols);
+	let timerRef = $state(0);
+	const paused = $derived(!timerRef);
+	let secondsSpent = $state(0);
+	const currentRowIndex = $derived(Math.floor(currentTileIndex / puzzle.dimensions.cols));
+	const currentColIndex = $derived(currentTileIndex % puzzle.dimensions.cols);
 
-	let currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
-	let currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
+	const currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
+	const currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
+	const solved = $derived(!tiles.some(t => !t.isBlank && t.guess !== t.answer));
 
 	$effect(() => {
 		currentTile.element?.focus();
+	});
+
+	$effect(() => {
+		if (solved) {
+			pauseTimer();
+		}
 	});
 
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
@@ -48,7 +59,7 @@
 			case 'BACKSPACE':
 				if (tile.guess) {
 					tile.guess = '';
-				} else if (currentColIndex > 0){
+				} else if (currentColIndex > 0) {
 					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
 					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
 						tiles[prevTileIndex].guess = '';
@@ -75,7 +86,7 @@
 				}
 				break;
 			default:
-				if (key.length === 1) {
+				if (key.length === 1 && !paused && !solved) {
 					tile.guess = key.toUpperCase().trim();
 					if (currentTileIndex === currentClue.tiles.at(-1)) {
 						const firstEmpty = firstEmptyTileInClue(currentClue);
@@ -150,6 +161,62 @@
 
 	const firstEmptyTileInClue = (clue: Clue) =>
 		clue.tiles.find(idx => (tiles[idx] as NonBlankTile).guess === '');
+
+	const solvePuzzle = () => {
+		tiles.forEach((tile) => {
+			if (!tile.isBlank) {
+				tile.guess = tile.answer;
+			}
+		});
+	};
+
+	const resetPuzzle = () => {
+		tiles.forEach((tile) => {
+			if (!tile.isBlank) {
+				tile.guess = '';
+			}
+			currentTileIndex = puzzle.clues[0].tiles[0];
+			secondsSpent = 0;
+			startTimer();
+		});
+	};
+
+	const startTimer = () => {
+		if (paused) {
+			timerRef = setInterval(() => {
+				secondsSpent++;
+			}, 1000);
+		}
+	};
+
+	const pauseTimer = () => {
+		if (timerRef) {
+			clearInterval(timerRef);
+			timerRef = 0;
+		}
+	};
+
+	const toggleTimer = () => {
+		if (paused) {
+			startTimer();
+		} else {
+			pauseTimer();
+		}
+	};
+
+	const formatDuration = (seconds: number) => {
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const secondsPart = seconds % 60;
+		const minutesPart = minutes % 60;
+
+		return `${hours > 0 ? `${hours}:` : ''}${minutesPart.toString().padStart(hours > 0 ? 2 : 1, '0')}:${secondsPart.toString().padStart(2, '0')}`;
+	};
+
+	onMount(() => {
+		startTimer();
+	});
+
 </script>
 
 <main>
@@ -179,7 +246,7 @@
 					</div>
 					<div class="flex justify-center w-full h-full absolute top-1">
 						<p class="text-[22px] cursor-default select-none">
-							{tile.guess}
+							{!solved && paused ? '' : tile.guess}
 						</p>
 					</div>
 				{/if}
@@ -187,4 +254,17 @@
 		{/each}
 	</div>
 	<p>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
+	<p>🕰️ {formatDuration(secondsSpent)}</p>
+	<button class="border-2 border-black p-1"
+					onclick={solvePuzzle}>Solve
+	</button>
+	<button class="border-2 border-black p-1"
+					onclick={resetPuzzle}>Reset
+	</button>
+	{#if !solved}
+		<button class="border-2 border-black p-1"
+						onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}
+		</button>
+	{/if}
+
 </main>
