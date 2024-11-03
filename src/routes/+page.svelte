@@ -115,10 +115,7 @@
 			nextClueIndex = puzzle.clues.findLastIndex(c => c.direction === (currentDirection === 'across' ? 'down' : 'down'));
 		}
 		const nextClue = puzzle.clues[nextClueIndex];
-		if (nextClue.direction !== currentDirection) {
-			currentDirection = nextClue.direction;
-		}
-		currentTileIndex = firstEmptyTileInClue(nextClue) || nextClue.tiles[0];
+		goToClue(nextClue);
 	};
 
 	const advanceTile = (direction: 'up' | 'down' | 'left' | 'right') => {
@@ -213,6 +210,13 @@
 		return `${hours > 0 ? `${hours}:` : ''}${minutesPart.toString().padStart(hours > 0 ? 2 : 1, '0')}:${secondsPart.toString().padStart(2, '0')}`;
 	};
 
+	const goToClue = (clue: Clue) => {
+		if (clue.direction !== currentDirection) {
+			currentDirection = clue.direction;
+		}
+		currentTileIndex = firstEmptyTileInClue(clue) || clue.tiles[0];
+	};
+
 	onMount(() => {
 		startTimer();
 	});
@@ -220,51 +224,76 @@
 </script>
 
 <main>
-	<div
-		tabindex="-1"
-		role="grid"
-		class="inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black font-['Helvetica']"
-	>
-		{#each tiles as tile, tileIndex}
+	<div class="flex h-[600px]">
+		<div class="flex flex-col">
 			<div
-				bind:this={tile.element}
-				tabindex={tile.isBlank ? null : 0}
-				role="gridcell"
-				class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
-				class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
-				class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
-				class:bg-black={tile.isBlank}
-				onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
-				onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
-				onclick={tile.isBlank ? null : onTileClick}
-				onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
-				{#if !tile.isBlank}
-					<div class="absolute top-[-1px] left-0.5 select-none">
-						<p class="text-[0.75em]">
-							{tile.label}
-						</p>
+				tabindex="-1"
+				role="grid"
+				class="w-max inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black"
+			>
+				{#each tiles as tile, tileIndex}
+					<div
+						bind:this={tile.element}
+						tabindex={tile.isBlank ? null : 0}
+						role="gridcell"
+						class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
+						class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
+						class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
+						class:bg-black={tile.isBlank}
+						onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
+						onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
+						onclick={tile.isBlank ? null : onTileClick}
+						onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
+						{#if !tile.isBlank}
+							<div class="absolute top-[-1px] left-0.5 select-none">
+								<p class="text-[0.75em]">
+									{tile.label}
+								</p>
+							</div>
+							<div class="flex justify-center w-full h-full absolute top-1">
+								<p class="text-[22px] cursor-default select-none">
+									{!solved && paused ? '' : tile.guess}
+								</p>
+							</div>
+						{/if}
 					</div>
-					<div class="flex justify-center w-full h-full absolute top-1">
-						<p class="text-[22px] cursor-default select-none">
-							{!solved && paused ? '' : tile.guess}
-						</p>
-					</div>
+				{/each}
+			</div>
+			<div>
+				<p>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
+				<p>🕰️ {formatDuration(secondsSpent)}</p>
+				<button class="border-2 border-black p-1"
+								onclick={solvePuzzle}>Solve
+				</button>
+				<button class="border-2 border-black p-1"
+								onclick={resetPuzzle}>Reset
+				</button>
+				{#if !solved}
+					<button class="border-2 border-black p-1"
+									onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}
+					</button>
 				{/if}
 			</div>
-		{/each}
+		</div>
+		<div class="flex flex-row h-full">
+			{#each ['across', 'down'] as direction}
+				<div class="mx-2">
+					<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
+					<ul>
+						{#each puzzle.clues.filter(c => c.direction === direction) as clue}
+							<li onkeydown={() => {}} role="menuitem" onclick={() => goToClue(clue)}
+									class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
+									class:bg-[#a7d8ff]={currentClue === clue}
+									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
+									class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
+							>
+								<span class="font-bold mr-2">{clue.number}</span>
+								<span>{clue.prompt}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/each}
+		</div>
 	</div>
-	<p>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
-	<p>🕰️ {formatDuration(secondsSpent)}</p>
-	<button class="border-2 border-black p-1"
-					onclick={solvePuzzle}>Solve
-	</button>
-	<button class="border-2 border-black p-1"
-					onclick={resetPuzzle}>Reset
-	</button>
-	{#if !solved}
-		<button class="border-2 border-black p-1"
-						onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}
-		</button>
-	{/if}
-
 </main>
