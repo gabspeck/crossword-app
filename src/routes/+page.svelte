@@ -44,6 +44,14 @@
 		}
 	});
 
+	$effect(() => {
+		if (currentClue) {
+			for (let e of document.getElementsByClassName('focused-clue')) {
+				e.scrollIntoView({behavior: 'smooth'})
+			}
+		}
+	})
+
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
 		const key = ev.key.toUpperCase();
 		switch (key) {
@@ -260,7 +268,7 @@
 				{/each}
 			</div>
 			<div>
-				<p>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
+				<p class:text-[#98a2a9]={paused} class:bg-[#98a2a9]={paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
 				<p>🕰️ {formatDuration(secondsSpent)}</p>
 				<button class="border-2 border-black p-1"
 								onclick={solvePuzzle}>Solve
@@ -275,23 +283,24 @@
 				{/if}
 			</div>
 		</div>
-		<div class="flex flex-row h-full">
+		<div class="flex flex-row">
 			{#each ['across', 'down'] as direction}
-				<div class="mx-2">
+				<div class="mx-2 w-1/2">
 					<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
-					<ul>
+					<ol class="overflow-y-scroll h-full">
 						{#each puzzle.clues.filter(c => c.direction === direction) as clue}
 							<li onkeydown={() => {}} role="menuitem" onclick={() => goToClue(clue)}
 									class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
+									class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
 									class:bg-[#a7d8ff]={currentClue === clue}
 									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
-									class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
+									class:text-[#98a2a9]={paused || clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
 							>
-								<span class="font-bold mr-2">{clue.number}</span>
-								<span>{clue.prompt}</span>
+								<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
+								<span class:bg-[#98a2a9]={paused} class:select-none={paused}>{clue.prompt}</span>
 							</li>
 						{/each}
-					</ul>
+					</ol>
 				</div>
 			{/each}
 		</div>
