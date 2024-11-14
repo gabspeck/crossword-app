@@ -3,8 +3,12 @@
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
 	import { onMount } from 'svelte';
 
+	type CheckStatus = 'correct' | 'incorrect' | null;
+
 	type GridTile = (| BlankTile | AnswerTile & {
 		guess: string
+		check: CheckStatus
+		revealed: boolean
 	}) &
 		{
 			element: HTMLElement | null;
@@ -18,7 +22,9 @@
 		return {
 			...t,
 			guess: '',
-			element: null
+			element: null,
+			check: null,
+			revealed: false
 		};
 	}));
 
@@ -33,9 +39,16 @@
 	const currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	const currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 	const solved = $derived(!tiles.some(t => !t.isBlank && t.guess !== t.answer));
+	let assistanceUsed = $state(false);
 
 	$effect(() => {
 		currentTile.element?.focus();
+	});
+
+	$effect(() => {
+		if (!assistanceUsed && currentTile.check || currentTile.revealed) {
+			assistanceUsed = true;
+		}
 	});
 
 	$effect(() => {
@@ -47,10 +60,10 @@
 	$effect(() => {
 		if (currentClue) {
 			for (let e of document.getElementsByClassName('focused-clue')) {
-				e.scrollIntoView({behavior: 'smooth'})
+				e.scrollIntoView({ behavior: 'smooth' });
 			}
 		}
-	})
+	});
 
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
 		const key = ev.key.toUpperCase();
@@ -95,7 +108,10 @@
 				break;
 			default:
 				if (key.length === 1 && !paused && !solved) {
-					tile.guess = key.toUpperCase().trim();
+					if (tile.check !== 'correct') {
+						tile.guess = key.toUpperCase().trim();
+						tile.check = null;
+					}
 					if (currentTileIndex === currentClue.tiles.at(-1)) {
 						const firstEmpty = firstEmptyTileInClue(currentClue);
 						if (firstEmpty != undefined) {
@@ -167,11 +183,34 @@
 	const firstEmptyTileInClue = (clue: Clue) =>
 		clue.tiles.find(idx => (tiles[idx] as NonBlankTile).guess === '');
 
-	const solvePuzzle = () => {
+	const checkTile = (tile: GridTile) => {
+		if (!tile.isBlank && !tile.check) {
+			tile.check = tile.guess === tile.answer ? 'correct' : 'incorrect';
+		}
+	};
+
+	const checkClue = (clue: Clue) => {
+		for (let tileIndex of clue.tiles) {
+			checkTile(tiles[tileIndex]);
+		}
+	};
+
+	const revealTile = (tile: GridTile) => {
+		if (!tile.isBlank && tile.guess !== tile.answer) {
+			tile.guess = tile.answer;
+			tile.revealed = true;
+			tile.check = 'correct';
+		}
+	};
+	const revealClue = () => {
+		currentClue.tiles.forEach(tileNumber => {
+			revealTile(tiles[tileNumber]);
+		});
+	};
+
+	const revealPuzzle = () => {
 		tiles.forEach((tile) => {
-			if (!tile.isBlank) {
-				tile.guess = tile.answer;
-			}
+			revealTile(tile as NonBlankTile);
 		});
 	};
 
@@ -179,6 +218,8 @@
 		tiles.forEach((tile) => {
 			if (!tile.isBlank) {
 				tile.guess = '';
+				tile.revealed = false;
+				tile.check = null;
 			}
 			currentTileIndex = puzzle.clues[0].tiles[0];
 			secondsSpent = 0;
@@ -253,28 +294,60 @@
 						onclick={tile.isBlank ? null : onTileClick}
 						onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
 						{#if !tile.isBlank}
-							<div class="absolute top-[-1px] left-0.5 select-none">
-								<p class="text-[0.75em]">
-									{tile.label}
-								</p>
-							</div>
-							<div class="flex justify-center w-full h-full absolute top-1">
-								<p class="text-[22px] cursor-default select-none">
-									{!solved && paused ? '' : tile.guess}
-								</p>
+							<div>
+								{#if tile.check === 'incorrect'}
+									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+										<line x1="100" y1="0" x2="0" y2="100" stroke="red" stroke-width="2" />
+									</svg>
+								{/if}
+								{#if tile.revealed}
+									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+										<g>
+											<polygon fill="#e63333" points="103.00,0.00 69.67,0.00 103.00,36.33" />
+											<circle fill="white" cx="93.24" cy="12.76" r="4.88" />
+										</g>
+									</svg>
+								{/if}
+								<div class="absolute top-[-1px] left-0.5 select-none">
+									<p class="text-[0.75em]">
+										{tile.label}
+									</p>
+								</div>
+								<div class="flex justify-center w-full h-full absolute top-1">
+									<p class="text-[22px] cursor-default select-none" class:text-[#2860d8]={tile.check === 'correct'}>
+										{!solved && paused ? '' : tile.guess}
+									</p>
+								</div>
 							</div>
 						{/if}
 					</div>
 				{/each}
 			</div>
 			<div>
-				<p class:text-[#98a2a9]={paused} class:bg-[#98a2a9]={paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}. {currentClue.prompt}</p>
+				<p class:text-[#98a2a9]={!solved && paused}
+					 class:bg-[#98a2a9]={!solved && paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}
+					. {currentClue.prompt}</p>
 				<p>🕰️ {formatDuration(secondsSpent)}</p>
 				<button class="border-2 border-black p-1"
-								onclick={solvePuzzle}>Solve
+								onclick={() => revealTile(currentTile)}>Reveal tile
+				</button>
+				<button class="border-2 border-black p-1"
+								onclick={revealClue}>Reveal word
+				</button>
+				<button class="border-2 border-black p-1"
+								onclick={revealPuzzle}>Reveal Puzzle
 				</button>
 				<button class="border-2 border-black p-1"
 								onclick={resetPuzzle}>Reset
+				</button>
+				<button onclick={() => checkTile(currentTile)} class="border-2 border-black p-1">
+					Check tile
+				</button>
+				<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">
+					Check word
+				</button>
+				<button class="border-2 border-black p-1">
+					Check puzzle
 				</button>
 				{#if !solved}
 					<button class="border-2 border-black p-1"
@@ -294,10 +367,10 @@
 									class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
 									class:bg-[#a7d8ff]={currentClue === clue}
 									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
-									class:text-[#98a2a9]={paused || clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
+									class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
 							>
 								<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
-								<span class:bg-[#98a2a9]={paused} class:select-none={paused}>{clue.prompt}</span>
+								<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused} class:select-none={paused}>{clue.prompt}</span>
 							</li>
 						{/each}
 					</ol>
