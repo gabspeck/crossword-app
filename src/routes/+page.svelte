@@ -270,95 +270,97 @@
 		startTimer();
 	});
 
+	let squareSize = '33px';
+
 </script>
 
-<main>
-	<div class="flex h-[600px]">
-		<div class="flex flex-col">
-			<div
-				tabindex="-1"
-				role="grid"
-				class="w-max inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black"
-			>
-				{#each tiles as tile, tileIndex}
-					<div
-						bind:this={tile.element}
-						tabindex={tile.isBlank ? null : 0}
-						role="gridcell"
-						class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
-						class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
-						class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
-						class:bg-black={tile.isBlank}
-						onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
-						onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
-						onclick={tile.isBlank ? null : onTileClick}
-						onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
-						{#if !tile.isBlank}
-							<div>
-								{#if tile.check === 'incorrect'}
-									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-										<line x1="100" y1="0" x2="0" y2="100" stroke="red" stroke-width="2" />
-									</svg>
-								{/if}
-								{#if tile.revealed}
-									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-										<g>
-											<polygon fill="#e63333" points="103.00,0.00 69.67,0.00 103.00,36.33" />
-											<circle fill="white" cx="93.24" cy="12.76" r="4.88" />
-										</g>
-									</svg>
-								{/if}
-								<div class="absolute top-[-1px] left-0.5 select-none">
-									<p class="text-[0.75em]">
-										{tile.label}
-									</p>
-								</div>
-								<div class="flex justify-center w-full h-full absolute top-1">
-									<p class="text-[22px] cursor-default select-none" class:text-[#2860d8]={tile.check === 'correct'}>
-										{!solved && paused ? '' : tile.guess}
-									</p>
-								</div>
+<main class="flex flex-col w-screen h-screen">
+	<div class="h-[50px] flex-shrink-0">
+		<!--			<div>-->
+		<!--				<p class:text-[#98a2a9]={!solved && paused}-->
+		<!--					 class:bg-[#98a2a9]={!solved && paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}-->
+		<!--					. {currentClue.prompt}</p>-->
+		<!--				<p>🕰️ {formatDuration(secondsSpent)}</p>-->
+		<!--				<button class="border-2 border-black p-1"-->
+		<!--								onclick={() => revealTile(currentTile)}>Reveal tile-->
+		<!--				</button>-->
+		<!--				<button class="border-2 border-black p-1"-->
+		<!--								onclick={revealClue}>Reveal word-->
+		<!--				</button>-->
+		<!--				<button class="border-2 border-black p-1"-->
+		<!--								onclick={revealPuzzle}>Reveal Puzzle-->
+		<!--				</button>-->
+		<!--				<button class="border-2 border-black p-1"-->
+		<!--								onclick={resetPuzzle}>Reset-->
+		<!--				</button>-->
+		<!--				<button onclick={() => checkTile(currentTile)} class="border-2 border-black p-1">-->
+		<!--					Check tile-->
+		<!--				</button>-->
+		<!--				<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">-->
+		<!--					Check word-->
+		<!--				</button>-->
+		<!--				<button class="border-2 border-black p-1">-->
+		<!--					Check puzzle-->
+		<!--				</button>-->
+		<!--				{#if !solved}-->
+		<!--					<button class="border-2 border-black p-1"-->
+		<!--									onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}-->
+		<!--					</button>-->
+		<!--				{/if}-->
+		<!--			</div>-->
+	</div>
+	<div class="flex-1 flex flex-col">
+		<div
+			tabindex="-1"
+			role="grid"
+			class="flex-1 inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black"
+		>
+			{#each tiles as tile, tileIndex}
+				<div
+					bind:this={tile.element}
+					tabindex={tile.isBlank ? null : 0}
+					role="gridcell"
+					class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] focus:outline-none relative"
+					class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
+					class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
+					class:bg-black={tile.isBlank}
+					onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
+					onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
+					onclick={tile.isBlank ? null : onTileClick}
+					onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
+					{#if !tile.isBlank}
+						<div>
+							{#if tile.check === 'incorrect'}
+								<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+									<line x1="100" y1="0" x2="0" y2="100" stroke="red" stroke-width="2" />
+								</svg>
+							{/if}
+							{#if tile.revealed}
+								<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+									<g>
+										<polygon fill="#e63333" points="103.00,0.00 69.67,0.00 103.00,36.33" />
+										<circle fill="white" cx="93.24" cy="12.76" r="4.88" />
+									</g>
+								</svg>
+							{/if}
+							<div class="absolute top-[-1px] left-0.5 select-none">
+								<p class="text-[0.75em]">
+									{tile.label}
+								</p>
 							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-			<div>
-				<p class:text-[#98a2a9]={!solved && paused}
-					 class:bg-[#98a2a9]={!solved && paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}
-					. {currentClue.prompt}</p>
-				<p>🕰️ {formatDuration(secondsSpent)}</p>
-				<button class="border-2 border-black p-1"
-								onclick={() => revealTile(currentTile)}>Reveal tile
-				</button>
-				<button class="border-2 border-black p-1"
-								onclick={revealClue}>Reveal word
-				</button>
-				<button class="border-2 border-black p-1"
-								onclick={revealPuzzle}>Reveal Puzzle
-				</button>
-				<button class="border-2 border-black p-1"
-								onclick={resetPuzzle}>Reset
-				</button>
-				<button onclick={() => checkTile(currentTile)} class="border-2 border-black p-1">
-					Check tile
-				</button>
-				<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">
-					Check word
-				</button>
-				<button class="border-2 border-black p-1">
-					Check puzzle
-				</button>
-				{#if !solved}
-					<button class="border-2 border-black p-1"
-									onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}
-					</button>
-				{/if}
-			</div>
+							<div class="flex justify-center w-full h-full absolute top-1">
+								<p class="text-[22px] cursor-default select-none" class:text-[#2860d8]={tile.check === 'correct'}>
+									{!solved && paused ? '' : tile.guess}
+								</p>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
 		</div>
-		<div class="flex flex-row">
+		<div class="flex-1 flex flex-row">
 			{#each ['across', 'down'] as direction}
-				<div class="mx-2 w-1/2">
+				<div class="mx-2 flex-1">
 					<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
 					<ol class="overflow-y-scroll h-full">
 						{#each puzzle.clues.filter(c => c.direction === direction) as clue}
@@ -370,7 +372,8 @@
 									class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
 							>
 								<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
-								<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused} class:select-none={paused}>{clue.prompt}</span>
+								<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused}
+											class:select-none={paused}>{clue.prompt}</span>
 							</li>
 						{/each}
 					</ol>
