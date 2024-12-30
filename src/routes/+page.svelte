@@ -304,19 +304,19 @@
 			</button>
 		{/if}
 	</div>
-	<div class="flex-1 flex flex-col overflow-hidden lg:flex-row">
-		<div class="flex-1 shrink-0 flex justify-center items-center">
+	<div class="flex flex-col overflow-hidden lg:flex-row">
+		<div class="flex justify-center items-center">
 			<div
 				tabindex="-1"
 				role="grid"
-				class="inline-grid shrink-0 grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black"
+				class="inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black aspect-square w-full max-w-[90vmin] max-h-[90vmin]"
 			>
 				{#each tiles as tile, tileIndex}
 					<div
 						bind:this={tile.element}
 						tabindex={tile.isBlank ? null : 0}
 						role="gridcell"
-						class="border-[#696969] border-r-[1px] border-b-[1px] w-[33px] h-[33px] shrink-0 gap-0 focus:outline-none relative"
+						class="border-[#696969] border-r-[1px] border-b-[1px] shrink-0 gap-0 focus:outline-none relative"
 						class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
 						class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
 						class:bg-black={tile.isBlank}
