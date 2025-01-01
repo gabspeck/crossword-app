@@ -11,7 +11,7 @@
 		revealed: boolean
 	}) &
 		{
-			element: HTMLElement | null;
+			element: SVGGElement | null;
 		}
 
 	type NonBlankTile = Exclude<GridTile, BlankTile>
@@ -42,8 +42,8 @@
 	let assistanceUsed = $state(false);
 
 	const gridSideLength = 500;
-	const strokeWidth = 3;
-	const marginOffset = strokeWidth / 2;
+	const gridStrokeWidth = 3;
+	const marginOffset = gridStrokeWidth / 2;
 	const cellSide = gridSideLength / puzzle.dimensions.cols;
 
 	const cellX = (idx: number) => ((idx % puzzle.dimensions.cols) * cellSide) + marginOffset;
@@ -203,6 +203,12 @@
 		}
 	};
 
+	const checkGrid = () => {
+		for (let tile of tiles) {
+			checkTile(tile);
+		}
+	};
+
 	const revealTile = (tile: GridTile) => {
 		if (!tile.isBlank && tile.guess !== tile.answer) {
 			tile.guess = tile.answer;
@@ -300,7 +306,7 @@
 		<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">
 			CW
 		</button>
-		<button class="border-2 border-black p-1">
+		<button onclick="{checkGrid}" class="border-2 border-black p-1">
 			CP
 		</button>
 		<button class="border-2 border-black p-1"
@@ -311,9 +317,10 @@
 	<div class="flex flex-col overflow-hidden lg:flex-row">
 		<div class="flex lg:flex-auto justify-center items-center">
 			<svg class="w-full h-full select-none"
-					 viewBox="0 0 {gridSideLength + strokeWidth} {gridSideLength + strokeWidth}">
+					 viewBox="0 0 {gridSideLength + gridStrokeWidth} {gridSideLength + gridStrokeWidth}">
 				{#each tiles as cell, idx}
-					<g class="focus:outline-none" tabindex={cell.isBlank ? null : 0} role="gridcell"
+					<g bind:this={cell.element} pointer-events="visible" class="focus:outline-none"
+						 tabindex={cell.isBlank ? null : 0} role="gridcell"
 						 onmousedown={cell.isBlank ? null : ev => ev.preventDefault()}
 						 onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
 						 onclick={cell.isBlank ? null : onTileClick}
@@ -325,25 +332,41 @@
 									x="{cellX(idx)}"
 									y="{cellY(idx)}"
 									stroke="#696969"
-									stroke-width="1" fill="{cell.isBlank ? 'black' : 'none'}">
+									stroke-width="1" fill="none">
 						</rect>
-						{#if !cell.isBlank && cell.label}
-							<text
-								font-size="10"
-								x="{cellX(idx) + 3}"
-								y="{cellY(idx) + 10}">{cell.label}</text>
+						{#if !cell.isBlank}
+							{#if cell.label}
+								<text
+									font-size="10"
+									x="{cellX(idx) + 3}"
+									y="{cellY(idx) + 10}">{cell.label}</text>
+							{/if}
 							<text
 								font-size="24"
 								text-anchor="middle"
 								x="{cellX(idx) + cellSide / 2}"
-								y="{cellY(idx) + cellSide - 4}">{cell.guess}</text>
+								class:fill-[#2860d8]={cell.check === 'correct'}
+								y="{cellY(idx) + cellSide - 4}">{paused && !solved ? '' : cell.guess}</text>
+							{#if cell.check === 'incorrect'}
+								<line
+									transform="translate({cellX(idx)},{cellY(idx)})"
+									x1={cellSide} y1="0" x2="0" y2={cellSide} stroke="red"
+									stroke-width="1" />
+							{/if}
+							{#if cell.revealed}
+								<g transform="translate({cellX(idx)}, {cellY(idx)})">
+									<polygon fill="#e63333" points="{cellSide},0.00 {cellSide / 2},0.00 {cellSide},{cellSide / 2}" />
+									<circle fill="white" cx="{0.85 * cellSide}" cy="{cellSide / 8}" r="2.44" />
+								</g>
+							{/if}
 						{/if}
 					</g>
 				{/each}
 				<rect class="fill-none stroke-black" role="grid" x="{marginOffset}" y="{marginOffset}"
+							tabindex="-1"
 							width="{gridSideLength}"
 							height="{gridSideLength}"
-							stroke-width="{strokeWidth}" />
+							stroke-width="{gridStrokeWidth}" />
 			</svg>
 			<!--				<div-->
 			<!--					tabindex="-1"-->
