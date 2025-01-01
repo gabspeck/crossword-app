@@ -41,6 +41,14 @@
 	const solved = $derived(!tiles.some(t => !t.isBlank && t.guess !== t.answer));
 	let assistanceUsed = $state(false);
 
+	const gridSideLength = 500;
+	const strokeWidth = 3;
+	const marginOffset = strokeWidth / 2;
+	const cellSide = gridSideLength / puzzle.dimensions.cols;
+
+	const cellX = (idx: number) => ((idx % puzzle.dimensions.cols) * cellSide) + marginOffset;
+	const cellY = (idx: number) => Math.floor(idx / puzzle.dimensions.cols) * cellSide + marginOffset;
+
 	$effect(() => {
 		currentTile.element?.focus();
 	});
@@ -125,7 +133,7 @@
 		}
 	};
 
-	const onTileClick = ({ currentTarget: tile }: MouseEvent & { currentTarget: HTMLDivElement }) => {
+	const onTileClick = ({ currentTarget: tile }: MouseEvent & { currentTarget: SVGGElement }) => {
 		if (tile !== document.activeElement) {
 			tile.focus();
 		} else {
@@ -184,7 +192,7 @@
 		clue.tiles.find(idx => (tiles[idx] as NonBlankTile).guess === '');
 
 	const checkTile = (tile: GridTile) => {
-		if (!tile.isBlank && !tile.check) {
+		if (!tile.isBlank && tile.guess && !tile.check) {
 			tile.check = tile.guess === tile.answer ? 'correct' : 'incorrect';
 		}
 	};
@@ -272,112 +280,143 @@
 
 </script>
 <main class="flex flex-col w-screen h-screen overflow-hidden">
-	<div class="min-h-[50px] w-full flex flex-row items-center justify-around">
-		<p class:text-[#98a2a9]={!solved && paused}
-			 class:bg-[#98a2a9]={!solved && paused}>{currentClue.number}{currentDirection.at(0)?.toUpperCase()}
-			. {currentClue.prompt}</p>
+	<div class="flex flex-row items-center justify-around lg:justify-start">
 		<p>🕰️ {formatDuration(secondsSpent)}</p>
 		<button class="border-2 border-black p-1"
-						onclick={() => revealTile(currentTile)}>Reveal tile
+						onclick={() => revealTile(currentTile)}>RT
 		</button>
 		<button class="border-2 border-black p-1"
-						onclick={revealClue}>Reveal word
+						onclick={revealClue}>RW
 		</button>
 		<button class="border-2 border-black p-1"
-						onclick={revealPuzzle}>Reveal Puzzle
+						onclick={revealPuzzle}>RP
 		</button>
 		<button class="border-2 border-black p-1"
-						onclick={resetPuzzle}>Reset
+						onclick={resetPuzzle}>RST
 		</button>
 		<button onclick={() => checkTile(currentTile)} class="border-2 border-black p-1">
-			Check tile
+			CT
 		</button>
 		<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">
-			Check word
+			CW
 		</button>
 		<button class="border-2 border-black p-1">
-			Check puzzle
+			CP
 		</button>
-		{#if !solved}
-			<button class="border-2 border-black p-1"
-							onclick={toggleTimer}>{paused ? 'Resume' : 'Pause'}
-			</button>
-		{/if}
+		<button class="border-2 border-black p-1"
+						class:invisible={solved}
+						onclick={toggleTimer}>{paused ? '▶️' : '⏸️'}
+		</button>
 	</div>
 	<div class="flex flex-col overflow-hidden lg:flex-row">
-		<div class="flex justify-center items-center">
-			<div
-				tabindex="-1"
-				role="grid"
-				class="inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black aspect-square w-full max-w-[90vmin] max-h-[90vmin]"
-			>
-				{#each tiles as tile, tileIndex}
-					<div
-						bind:this={tile.element}
-						tabindex={tile.isBlank ? null : 0}
-						role="gridcell"
-						class="border-[#696969] border-r-[1px] border-b-[1px] shrink-0 gap-0 focus:outline-none relative"
-						class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}
-						class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}
-						class:bg-black={tile.isBlank}
-						onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}
-						onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}
-						onclick={tile.isBlank ? null : onTileClick}
-						onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>
-						{#if !tile.isBlank}
-							<div>
-								{#if tile.check === 'incorrect'}
-									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-										<line x1="100" y1="0" x2="0" y2="100" stroke="red" stroke-width="2" />
-									</svg>
-								{/if}
-								{#if tile.revealed}
-									<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-										<g>
-											<polygon fill="#e63333" points="103.00,0.00 69.67,0.00 103.00,36.33" />
-											<circle fill="white" cx="93.24" cy="12.76" r="4.88" />
-										</g>
-									</svg>
-								{/if}
-								<div class="absolute top-[-1px] left-0.5 select-none">
-									<p class="text-[0.75em]">
-										{tile.label}
-									</p>
-								</div>
-								<div class="flex justify-center w-full h-full absolute top-1">
-									<p class="text-[22px] cursor-default select-none" class:text-[#2860d8]={tile.check === 'correct'}>
-										{!solved && paused ? '' : tile.guess}
-									</p>
-								</div>
-							</div>
+		<div class="flex lg:flex-auto justify-center items-center">
+			<svg class="w-full h-full select-none"
+					 viewBox="0 0 {gridSideLength + strokeWidth} {gridSideLength + strokeWidth}">
+				{#each tiles as cell, idx}
+					<g class="focus:outline-none" tabindex={cell.isBlank ? null : 0} role="gridcell"
+						 onmousedown={cell.isBlank ? null : ev => ev.preventDefault()}
+						 onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
+						 onclick={cell.isBlank ? null : onTileClick}
+						 onfocus={cell.isBlank ? null : () => {if (idx !== currentTileIndex) currentTileIndex = idx}}>
+						<rect width="{cellSide}" height="{cellSide}"
+									class:fill-[#FFDA00]={!cell.isBlank && currentTileIndex === idx}
+									class:fill-[#A7D8FF]={!cell.isBlank && currentTile.clues[currentDirection] === cell.clues[currentDirection]}
+									class:fill-black={cell.isBlank}
+									x="{cellX(idx)}"
+									y="{cellY(idx)}"
+									stroke="#696969"
+									stroke-width="1" fill="{cell.isBlank ? 'black' : 'none'}">
+						</rect>
+						{#if !cell.isBlank && cell.label}
+							<text
+								font-size="10"
+								x="{cellX(idx) + 3}"
+								y="{cellY(idx) + 10}">{cell.label}</text>
+							<text
+								font-size="24"
+								text-anchor="middle"
+								x="{cellX(idx) + cellSide / 2}"
+								y="{cellY(idx) + cellSide - 4}">{cell.guess}</text>
 						{/if}
-					</div>
+					</g>
 				{/each}
-			</div>
+				<rect class="fill-none stroke-black" role="grid" x="{marginOffset}" y="{marginOffset}"
+							width="{gridSideLength}"
+							height="{gridSideLength}"
+							stroke-width="{strokeWidth}" />
+			</svg>
+			<!--				<div-->
+			<!--					tabindex="-1"-->
+			<!--					role="grid"-->
+			<!--					class="inline-grid grid-cols-{puzzle.dimensions.cols} gap-0 border-[3px] border-black aspect-square w-full max-w-[95cqmin] max-h-[95cqmin]"-->
+			<!--				>-->
+			<!--					{#each tiles as tile, tileIndex}-->
+			<!--						<div-->
+			<!--							bind:this={tile.element}-->
+			<!--							tabindex={tile.isBlank ? null : 0}-->
+			<!--							role="gridcell"-->
+			<!--							class="border-[#696969] border-r-[1px] border-b-[1px] shrink-0 gap-0 focus:outline-none relative"-->
+			<!--							class:bg-[#FFDA00]={!tile.isBlank && currentTileIndex === tileIndex}-->
+			<!--							class:bg-[#A7D8FF]={!tile.isBlank && currentTile.clues[currentDirection] === tile.clues[currentDirection]}-->
+			<!--							class:bg-black={tile.isBlank}-->
+			<!--							onmousedown={tile.isBlank ? null : ev => ev.preventDefault()}-->
+			<!--							onkeydown={tile.isBlank ? null : (ev) => onTileKeyDown(ev, tile)}-->
+			<!--							onclick={tile.isBlank ? null : onTileClick}-->
+			<!--							onfocus={tile.isBlank ? null : () => {if (tileIndex !== currentTileIndex) currentTileIndex = tileIndex}}>-->
+			<!--							{#if !tile.isBlank}-->
+			<!--								<div>-->
+			<!--									{#if tile.check === 'incorrect'}-->
+			<!--										<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">-->
+			<!--											<line x1="100" y1="0" x2="0" y2="100" stroke="red" stroke-width="2" />-->
+			<!--										</svg>-->
+			<!--									{/if}-->
+			<!--									{#if tile.revealed}-->
+			<!--										<svg class="absolute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">-->
+			<!--											<g>-->
+			<!--												<polygon fill="#e63333" points="103.00,0.00 69.67,0.00 103.00,36.33" />-->
+			<!--												<circle fill="white" cx="93.24" cy="12.76" r="4.88" />-->
+			<!--											</g>-->
+			<!--										</svg>-->
+			<!--									{/if}-->
+			<!--									<div class="absolute top-[-1px] left-0.5 select-none">-->
+			<!--										<p class="text-[0.75em]">-->
+			<!--											{tile.label}-->
+			<!--										</p>-->
+			<!--									</div>-->
+			<!--									<div class="flex justify-center w-full h-full absolute top-1">-->
+			<!--										<p class="text-[22px] cursor-default select-none" class:text-[#2860d8]={tile.check === 'correct'}>-->
+			<!--											{!solved && paused ? '' : tile.guess}-->
+			<!--										</p>-->
+			<!--									</div>-->
+			<!--								</div>-->
+			<!--							{/if}-->
+			<!--						</div>-->
+			<!--					{/each}-->
+			<!--				</div>-->
 		</div>
-		<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
-			{#each ['across', 'down'] as direction}
-				<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
-					<div class="flex-1 flex flex-col min-h-0">
-						<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
-						<ul class="flex-1 overflow-y-auto">
-							{#each puzzle.clues.filter(c => c.direction === direction) as clue}
-								<li onkeydown={() => {}} role="menuitem" onclick={() => goToClue(clue)}
-										class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
-										class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
-										class:bg-[#a7d8ff]={currentClue === clue}
-										class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
-										class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
-								>
-									<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
-									<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused}
-												class:select-none={paused}>{clue.prompt}</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
+	</div>
+	<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
+		{#each ['across', 'down'] as direction}
+			<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
+				<div class="flex-1 flex flex-col min-h-0">
+					<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
+					<ul class="flex-1 overflow-y-auto">
+						{#each puzzle.clues.filter(c => c.direction === direction) as clue}
+							<li onkeydown={() => {}} role="menuitem" onclick={() => goToClue(clue)}
+									class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
+									class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
+									class:bg-[#a7d8ff]={currentClue === clue}
+									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
+									class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
+							>
+								<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
+								<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused}
+											class:select-none={paused}>{clue.prompt}</span>
+							</li>
+						{/each}
+					</ul>
 				</div>
-			{/each}
-		</div>
+			</div>
+		{/each}
 	</div>
 </main>
