@@ -2,6 +2,7 @@
 
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
 	import { onDestroy, onMount } from 'svelte';
+	import { browser } from '$app/environment';
 
 	type CheckStatus = 'correct' | 'incorrect' | null;
 
@@ -88,7 +89,7 @@
 			case 'BACKSPACE':
 				if (tile.guess) {
 					tile.guess = '';
-				} else if (currentColIndex > 0) {
+				} else if ((currentDirection === 'across' && currentColIndex > 0) || (currentRowIndex > 0)) {
 					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
 					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
 						tiles[prevTileIndex].guess = '';
@@ -301,7 +302,9 @@
 	});
 
 	onDestroy(() => {
-		document.removeEventListener('click', closeRevealMenu);
+		if (browser) {
+			document.removeEventListener('click', closeRevealMenu);
+		}
 	});
 
 
