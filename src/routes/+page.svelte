@@ -1,8 +1,8 @@
 <script lang="ts">
 
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
-	import { onDestroy, onMount } from 'svelte';
-	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
+	import PopupMenu from '../components/PopupMenu.svelte';
 
 	type CheckStatus = 'correct' | 'incorrect' | null;
 
@@ -285,61 +285,23 @@
 		startTimer();
 	});
 
-	let revealMenuOpen = $state(false);
-	let menuRef: HTMLElement;
-	const toggleRevealMenu = () => {
-		revealMenuOpen = !revealMenuOpen;
-	};
-
-	const closeRevealMenu = (ev: MouseEvent) => {
-		if (ev.target !== menuRef) {
-			revealMenuOpen = false;
-		}
-	};
-
-	onMount(() => {
-		document.addEventListener('click', closeRevealMenu);
-	});
-
-	onDestroy(() => {
-		if (browser) {
-			document.removeEventListener('click', closeRevealMenu);
-		}
-	});
-
-
 </script>
 <main class="flex justify-center">
 	<div class="flex flex-col w-screen h-screen max-w-screen-2xl overflow-hidden">
 		<div class="flex flex-row items-center justify-around lg:justify-start">
 			<p>🕰️ {formatDuration(secondsSpent)}</p>
-			<div class="relative inline-block">
-				<button class="border-2 border-black p-1" onclick={toggleRevealMenu} bind:this={menuRef}>Reveal</button>
-				{#if revealMenuOpen}
-					<div tabindex="-1"
-							 class="absolute left-0 mt-2 w-48 bg-white shadow-lg rounded-md py-1 ring-1 ring-black ring-opacity-5 z-10">
-						<button class="block w-full text-left px-4 py-2 hover:bg-gray-100" onclick={() => revealTile(currentTile)}>
-							Letter
-						</button>
-						<button class="block w-full text-left px-4 py-2 hover:bg-gray-100" onclick={() => revealClue()}>Word
-						</button>
-						<button class="block w-full text-left px-4 py-2 hover:bg-gray-100" onclick={() => revealPuzzle()}>Puzzle
-						</button>
-					</div>
-				{/if}
-			</div>
+			<PopupMenu label="Reveal" items={[
+					{label: 'Letter', callback: () => revealTile(currentTile)},
+					{label: 'Word', callback: () => revealClue()},
+					{label: 'Puzzle', callback: () => revealPuzzle()}
+					]} />
+			<PopupMenu label="Check" items={[
+				{label:"Letter", callback: () => checkTile(currentTile)},
+				{label:"Word", callback: () => checkClue(currentClue)},
+				{label:"Puzzle", callback: () => checkGrid()},
+			]}/>
 			<button class="border-2 border-black p-1"
-							onclick={resetPuzzle}>Clear puzzle
-			</button>
-			<button onclick={() => checkTile(currentTile)} class="border-2 border-black p-1">
-				CT
-			</button>
-			<button onclick={() => checkClue(currentClue)} class="border-2 border-black p-1">
-				CW
-			</button>
-			<button onclick="{checkGrid}" class="border-2 border-black p-1">
-				CP
-			</button>
+							onclick={resetPuzzle}>Reset</button>
 			<button class="border-2 border-black p-1"
 							class:invisible={solved}
 							onclick={toggleTimer}>{paused ? '▶️' : '⏸️'}
