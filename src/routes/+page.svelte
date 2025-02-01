@@ -75,6 +75,7 @@
 	});
 
 	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
+		const uncheckedTile = tile.guess && tile.check !== 'correct';
 		const key = ev.key.toUpperCase();
 		switch (key) {
 			case 'TAB':
@@ -82,17 +83,22 @@
 				advanceClue(ev.shiftKey ? -1 : 1);
 				break;
 			case 'DELETE':
-				if (tile.guess) {
+				if (uncheckedTile) {
+					tile.check = null;
 					tile.guess = '';
 				}
 				break;
 			case 'BACKSPACE':
-				if (tile.guess) {
+				if (uncheckedTile) {
+					tile.check = null;
 					tile.guess = '';
 				} else if ((currentDirection === 'across' && currentColIndex > 0) || (currentRowIndex > 0)) {
 					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
 					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
-						tiles[prevTileIndex].guess = '';
+						if (tiles[prevTileIndex].check !== 'correct') {
+							tiles[prevTileIndex].check = null;
+							tiles[prevTileIndex].guess = '';
+						}
 						currentTileIndex = prevTileIndex;
 					}
 				}
@@ -299,9 +305,10 @@
 				{label:"Letter", callback: () => checkTile(currentTile)},
 				{label:"Word", callback: () => checkClue(currentClue)},
 				{label:"Puzzle", callback: () => checkGrid()},
-			]}/>
+			]} />
 			<button class="border-2 border-black p-1"
-							onclick={resetPuzzle}>Reset</button>
+							onclick={resetPuzzle}>Reset
+			</button>
 			<button class="border-2 border-black p-1"
 							class:invisible={solved}
 							onclick={toggleTimer}>{paused ? '▶️' : '⏸️'}
@@ -316,6 +323,7 @@
 							 tabindex={cell.isBlank ? null : 0} role="gridcell"
 							 onmousedown={cell.isBlank ? null : ev => ev.preventDefault()}
 							 onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
+							 onchange={cell.isBlank ? null : (ev) => onTileChange(ev, cell)}
 							 onclick={cell.isBlank ? null : onTileClick}
 							 onfocus={cell.isBlank ? null : () => {if (idx !== currentTileIndex) currentTileIndex = idx}}>
 							<rect width="{cellSide}" height="{cellSide}"
