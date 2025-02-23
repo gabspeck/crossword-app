@@ -323,7 +323,6 @@
 							 tabindex={cell.isBlank ? null : 0} role="gridcell"
 							 onmousedown={cell.isBlank ? null : ev => ev.preventDefault()}
 							 onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
-							 onchange={cell.isBlank ? null : (ev) => onTileChange(ev, cell)}
 							 onclick={cell.isBlank ? null : onTileClick}
 							 onfocus={cell.isBlank ? null : () => {if (idx !== currentTileIndex) currentTileIndex = idx}}>
 							<rect width="{cellSide}" height="{cellSide}"
