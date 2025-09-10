@@ -3,6 +3,7 @@
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
 	import { onMount } from 'svelte';
 	import PopupMenu from '../components/PopupMenu.svelte';
+	import OnScreenKeyboard from '../components/OnScreenKeyboard.svelte';
 
 	type CheckStatus = 'correct' | 'incorrect' | null;
 
@@ -74,13 +75,13 @@
 		}
 	});
 
-	const onTileKeyDown = (ev: KeyboardEvent, tile: NonBlankTile) => {
+	const onTileKeyDown = (eventOrKey: KeyboardEvent | string, tile: NonBlankTile) => {
+		const [ev, key] = typeof eventOrKey === 'string' ? [null, eventOrKey.toUpperCase()] : [eventOrKey, eventOrKey.key.toUpperCase()];
 		const uncheckedTile = tile.guess && tile.check !== 'correct';
-		const key = ev.key.toUpperCase();
 		switch (key) {
 			case 'TAB':
-				ev.preventDefault();
-				advanceClue(ev.shiftKey ? -1 : 1);
+				ev?.preventDefault();
+				advanceClue(ev?.shiftKey ? -1 : 1);
 				break;
 			case 'DELETE':
 				if (uncheckedTile) {
@@ -106,7 +107,7 @@
 			case 'ARROWUP':
 			case 'ARROWDOWN':
 				if (currentDirection === 'across') {
-					ev.preventDefault();
+					ev?.preventDefault();
 					currentDirection = 'down';
 				} else {
 					advanceTile(key === 'ARROWUP' ? 'up' : 'down');
@@ -115,10 +116,10 @@
 			case 'ARROWLEFT':
 			case 'ARROWRIGHT':
 				if (currentDirection === 'down') {
-					ev.preventDefault();
+					ev?.preventDefault();
 					currentDirection = 'across';
 				} else {
-					advanceTile(key === 'ARROWLEFT' ? 'left' : 'right');
+					advanceTile(ev?.key === 'ARROWLEFT' ? 'left' : 'right');
 				}
 				break;
 			default:
@@ -382,7 +383,7 @@
 			</div>
 		</div>
 
-		<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
+		<div class="hidden flex-1 lg:flex flex-col min-h-0 lg:flex-row">
 			{#each ['across', 'down'] as direction}
 				<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
 					<div class="flex-1 flex flex-col min-h-0">
@@ -405,6 +406,9 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+		<div class="lg:hidden mt-2">
+			<OnScreenKeyboard onPress={(key) => onTileKeyDown(key, currentTile)} />
 		</div>
 	</div>
 </main>
