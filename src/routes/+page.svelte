@@ -294,7 +294,7 @@
 
 </script>
 <main class="flex justify-center fixed">
-	<div class="flex flex-col w-screen h-screen max-w-screen-2xl overflow-hidden">
+	<div class="flex flex-col w-screen h-[100dvh] max-w-screen-2xl overflow-hidden">
 		<div class="flex flex-row items-center justify-around lg:justify-start">
 			<p>🕰️ {formatDuration(secondsSpent)}</p>
 			<PopupMenu label="Reveal" items={[
