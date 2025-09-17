@@ -20,9 +20,12 @@
 	{#each rows as row}
 		<div class="flex justify-center gap-2">
 			{#each row.split('') as key}
-				<button
-					class="w-11 h-14 rounded-lg border border-gray-300 bg-gray-100 text-gray-900 font-semibold text-lg leading-tight cursor-pointer transition-all duration-150 ease-in-out hover:bg-gray-200 active:translate-y-px focus:outline focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2"
-					type="button"
+				<svg
+					class="w-11 h-14 cursor-pointer focus:outline focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2"
+					viewBox="0 0 44 56"
+					role="button"
+					tabindex="0"
+					aria-label={keyName(key)}
 					on:pointerdown={() => handlePress(keyName(key))}
 					on:keydown={(e) => {
 						if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
@@ -30,10 +33,26 @@
 							handlePress(keyName(key));
 						}
 					}}
-					aria-label={key}
 				>
-					{key}
-				</button>
+					<rect
+						x="0.5"
+						y="0.5"
+						width="43"
+						height="55"
+						rx="8"
+						class="fill-gray-100 stroke-gray-300 hover:fill-gray-200"
+						stroke-width="1"
+					/>
+					<text
+						x="50%"
+						y="50%"
+						text-anchor="middle"
+						dominant-baseline="central"
+						class="font-semibold text-lg fill-gray-900"
+					>
+						{key}
+					</text>
+				</svg>
 			{/each}
 		</div>
 	{/each}

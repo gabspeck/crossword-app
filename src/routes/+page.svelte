@@ -40,7 +40,7 @@
 
 	const currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	const currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
-	const solved = $derived(!tiles.some(t => !t.isBlank && t.guess !== t.answer));
+	const solved = $derived(!tiles.some((t) => !t.isBlank && t.guess !== t.answer));
 	let assistanceUsed = $state(false);
 
 	const gridSideLength = 500;
@@ -48,7 +48,7 @@
 	const marginOffset = gridStrokeWidth / 2;
 	const cellSide = gridSideLength / puzzle.dimensions.cols;
 
-	const cellX = (idx: number) => ((idx % puzzle.dimensions.cols) * cellSide) + marginOffset;
+	const cellX = (idx: number) => (idx % puzzle.dimensions.cols) * cellSide + marginOffset;
 	const cellY = (idx: number) => Math.floor(idx / puzzle.dimensions.cols) * cellSide + marginOffset;
 
 	$effect(() => {
@@ -56,7 +56,7 @@
 	});
 
 	$effect(() => {
-		if (!assistanceUsed && currentTile.check || currentTile.revealed) {
+		if ((!assistanceUsed && currentTile.check) || currentTile.revealed) {
 			assistanceUsed = true;
 		}
 	});
@@ -76,7 +76,10 @@
 	});
 
 	const onTileKeyDown = (eventOrKey: KeyboardEvent | string, tile: NonBlankTile) => {
-		const [ev, key] = typeof eventOrKey === 'string' ? [null, eventOrKey.toUpperCase()] : [eventOrKey, eventOrKey.key.toUpperCase()];
+		const [ev, key] =
+			typeof eventOrKey === 'string'
+				? [null, eventOrKey.toUpperCase()]
+				: [eventOrKey, eventOrKey.key.toUpperCase()];
 		const uncheckedTile = tile.guess && tile.check !== 'correct';
 		switch (key) {
 			case 'TAB':
@@ -93,8 +96,13 @@
 				if (uncheckedTile) {
 					tile.check = null;
 					tile.guess = '';
-				} else if ((currentDirection === 'across' && currentColIndex > 0) || (currentRowIndex > 0)) {
-					const prevTileIndex = currentDirection === 'across' ? Math.max(currentTileIndex - 1, 0) : (currentTileIndex - puzzle.dimensions.rows < 0 ? currentTileIndex : currentTileIndex - puzzle.dimensions.rows);
+				} else if ((currentDirection === 'across' && currentColIndex > 0) || currentRowIndex > 0) {
+					const prevTileIndex =
+						currentDirection === 'across'
+							? Math.max(currentTileIndex - 1, 0)
+							: currentTileIndex - puzzle.dimensions.rows < 0
+								? currentTileIndex
+								: currentTileIndex - puzzle.dimensions.rows;
 					if (prevTileIndex !== currentTileIndex && !tiles[prevTileIndex].isBlank) {
 						if (tiles[prevTileIndex].check !== 'correct') {
 							tiles[prevTileIndex].check = null;
@@ -225,7 +233,7 @@
 		}
 	};
 	const revealClue = () => {
-		currentClue.tiles.forEach(tileNumber => {
+		currentClue.tiles.forEach((tileNumber) => {
 			revealTile(tiles[tileNumber]);
 		});
 	};
@@ -291,84 +299,114 @@
 	onMount(() => {
 		startTimer();
 	});
-
 </script>
+
 <main class="flex justify-center fixed">
 	<div class="flex flex-col w-screen h-[100dvh] max-w-screen-2xl overflow-hidden">
-		<div class="flex flex-row items-center justify-around lg:justify-start">
-			<p>🕰️ {formatDuration(secondsSpent)}</p>
-			<PopupMenu label="Reveal" items={[
-					{label: 'Letter', callback: () => revealTile(currentTile)},
-					{label: 'Word', callback: () => revealClue()},
-					{label: 'Puzzle', callback: () => revealPuzzle()}
-					]} />
-			<PopupMenu label="Check" items={[
-				{label:"Letter", callback: () => checkTile(currentTile)},
-				{label:"Word", callback: () => checkClue(currentClue)},
-				{label:"Puzzle", callback: () => checkGrid()},
-			]} />
-			<button class="border-2 border-black p-1"
-							onclick={resetPuzzle}>Reset
-			</button>
-			<button class="border-2 border-black p-1"
-							class:invisible={solved}
-							onclick={toggleTimer}>{paused ? '▶️' : '⏸️'}
-			</button>
-		</div>
 		<div class="flex flex-col overflow-hidden">
-			<div class="flex lg:flex-auto justify-center items-center">
+			<div class="flex lg:flex-auto flex-col justify-center items-center">
+				<div class="flex flex-row items-center lg:justify-start py-2 gap-4 mx-auto">
+					<p>🕰️ {formatDuration(secondsSpent)}</p>
+					<button class:invisible={solved} class="hover:bg-slate-300" onclick={toggleTimer}
+						>{paused ? '▶️' : '⏸️'}
+					</button>
+					<PopupMenu
+						label="Reveal"
+						items={[
+							{ label: 'Letter', callback: () => revealTile(currentTile) },
+							{ label: 'Word', callback: () => revealClue() },
+							{ label: 'Puzzle', callback: () => revealPuzzle() }
+						]}
+					/>
+					<PopupMenu
+						label="Check"
+						items={[
+							{ label: 'Letter', callback: () => checkTile(currentTile) },
+							{ label: 'Word', callback: () => checkClue(currentClue) },
+							{ label: 'Puzzle', callback: () => checkGrid() }
+						]}
+					/>
+					<button onclick={resetPuzzle}>Reset</button>
+				</div>
 				<div class="w-full h-full max-w-2xl">
-					<svg class="select-none"
-							 viewBox="0 0 {gridSideLength + gridStrokeWidth} {gridSideLength + gridStrokeWidth}">
+					<svg
+						class="select-none"
+						viewBox="0 0 {gridSideLength + gridStrokeWidth} {gridSideLength + gridStrokeWidth}"
+					>
 						{#each tiles as cell, idx}
-							<g bind:this={cell.element} pointer-events="visible" class="focus:outline-none"
-								 tabindex={cell.isBlank ? null : 0} role="gridcell"
-								 onmousedown={cell.isBlank ? null : ev => ev.preventDefault()}
-								 onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
-								 onclick={cell.isBlank ? null : onTileClick}
-								 onfocus={cell.isBlank ? null : () => {if (idx !== currentTileIndex) currentTileIndex = idx}}>
-								<rect width="{cellSide}" height="{cellSide}"
-											class:fill-[#FFDA00]={!cell.isBlank && currentTileIndex === idx}
-											class:fill-[#A7D8FF]={!cell.isBlank && currentTile.clues[currentDirection] === cell.clues[currentDirection]}
-											class:fill-black={cell.isBlank}
-											x="{cellX(idx)}"
-											y="{cellY(idx)}"
-											stroke="#696969"
-											stroke-width="1" fill="none">
+							<g
+								bind:this={cell.element}
+								pointer-events="visible"
+								class="focus:outline-none"
+								tabindex={cell.isBlank ? null : 0}
+								role="gridcell"
+								onmousedown={cell.isBlank ? null : (ev) => ev.preventDefault()}
+								onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
+								onclick={cell.isBlank ? null : onTileClick}
+								onfocus={cell.isBlank
+									? null
+									: () => {
+											if (idx !== currentTileIndex) currentTileIndex = idx;
+										}}
+							>
+								<rect
+									width={cellSide}
+									height={cellSide}
+									class:fill-[#FFDA00]={!cell.isBlank && currentTileIndex === idx}
+									class:fill-[#A7D8FF]={!cell.isBlank &&
+										currentTile.clues[currentDirection] === cell.clues[currentDirection]}
+									class:fill-black={cell.isBlank}
+									x={cellX(idx)}
+									y={cellY(idx)}
+									stroke="#696969"
+									stroke-width="1"
+									fill="none"
+								>
 								</rect>
 								{#if !cell.isBlank}
 									{#if cell.label}
-										<text
-											font-size="10"
-											x="{cellX(idx) + 3}"
-											y="{cellY(idx) + 10}">{cell.label}</text>
+										<text font-size="10" x={cellX(idx) + 3} y={cellY(idx) + 10}>{cell.label}</text>
 									{/if}
 									<text
 										font-size="24"
 										text-anchor="middle"
-										x="{cellX(idx) + cellSide / 2}"
+										x={cellX(idx) + cellSide / 2}
 										class:fill-[#2860d8]={cell.check === 'correct'}
-										y="{cellY(idx) + cellSide - 4}">{paused && !solved ? '' : cell.guess}</text>
+										y={cellY(idx) + cellSide - 4}>{paused && !solved ? '' : cell.guess}</text
+									>
 									{#if cell.check === 'incorrect'}
 										<line
 											transform="translate({cellX(idx)},{cellY(idx)})"
-											x1={cellSide} y1="0" x2="0" y2={cellSide} stroke="red"
-											stroke-width="1" />
+											x1={cellSide}
+											y1="0"
+											x2="0"
+											y2={cellSide}
+											stroke="red"
+											stroke-width="1"
+										/>
 									{/if}
 									{#if cell.revealed}
 										<g transform="translate({cellX(idx)}, {cellY(idx)})">
-											<polygon fill="#e63333" points="{cellSide},0.00 {cellSide / 2},0.00 {cellSide},{cellSide / 2}" />
-											<circle fill="white" cx="{0.85 * cellSide}" cy="{cellSide / 8}" r="2.44" />
+											<polygon
+												fill="#e63333"
+												points="{cellSide},0.00 {cellSide / 2},0.00 {cellSide},{cellSide / 2}"
+											/>
+											<circle fill="white" cx={0.85 * cellSide} cy={cellSide / 8} r="2.44" />
 										</g>
 									{/if}
 								{/if}
 							</g>
 						{/each}
-						<rect class="fill-none stroke-black" role="grid" x="{marginOffset}" y="{marginOffset}"
-									tabindex="-1"
-									width="{gridSideLength}"
-									height="{gridSideLength}"
-									stroke-width="{gridStrokeWidth}" />
+						<rect
+							class="fill-none stroke-black"
+							role="grid"
+							x={marginOffset}
+							y={marginOffset}
+							tabindex="-1"
+							width={gridSideLength}
+							height={gridSideLength}
+							stroke-width={gridStrokeWidth}
+						/>
 					</svg>
 					<div class="h-16 px-5 flex bg-[#a7d8ff]">
 						<button class="shrink-0 w-8" onclick={() => advanceClue(-1)}>&lt;</button>
@@ -389,17 +427,25 @@
 					<div class="flex-1 flex flex-col min-h-0">
 						<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
 						<ul class="flex-1 overflow-y-auto">
-							{#each puzzle.clues.filter(c => c.direction === direction) as clue}
-								<li onkeydown={() => {}} role="menuitem" onclick={() => goToClue(clue)}
-										class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
-										class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
-										class:bg-[#a7d8ff]={currentClue === clue}
-										class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
-										class:text-[#98a2a9]={clue.tiles.every(t => !tiles[t].isBlank && !!tiles[t].guess)}
+							{#each puzzle.clues.filter((c) => c.direction === direction) as clue}
+								<li
+									onkeydown={() => {}}
+									role="menuitem"
+									onclick={() => goToClue(clue)}
+									class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
+									class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
+									class:bg-[#a7d8ff]={currentClue === clue}
+									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
+									class:text-[#98a2a9]={clue.tiles.every(
+										(t) => !tiles[t].isBlank && !!tiles[t].guess
+									)}
 								>
 									<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
-									<span class:bg-[#98a2a9]={!solved && paused} class:text-[#98a2a9]={!solved && paused}
-												class:select-none={paused}>{clue.prompt}</span>
+									<span
+										class:bg-[#98a2a9]={!solved && paused}
+										class:text-[#98a2a9]={!solved && paused}
+										class:select-none={paused}>{clue.prompt}</span
+									>
 								</li>
 							{/each}
 						</ul>
