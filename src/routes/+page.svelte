@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import PopupMenu from '../components/PopupMenu.svelte';
 	import OnScreenKeyboard from '../components/OnScreenKeyboard.svelte';
+	import ClueList from '../components/ClueList.svelte';
 
 	type CheckStatus = 'correct' | 'incorrect' | null;
 
@@ -41,7 +42,6 @@
 	const currentTile: NonBlankTile = $derived(tiles[currentTileIndex]) as NonBlankTile;
 	const currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 	const solved = $derived(!tiles.some((t) => !t.isBlank && t.guess !== t.answer));
-	let assistanceUsed = $state(false);
 
 	const gridSideLength = 500;
 	const gridStrokeWidth = 3;
@@ -308,7 +308,7 @@
 				<div class="flex flex-row items-center lg:justify-start py-2 gap-4 mx-auto">
 					<p>🕰️ {formatDuration(secondsSpent)}</p>
 					<button class:invisible={solved} class="hover:bg-slate-300" onclick={toggleTimer}
-						>{paused ? '▶️' : '⏸️'}
+					>{paused ? '▶️' : '⏸️'}
 					</button>
 					<PopupMenu
 						label="Reveal"
@@ -420,38 +420,9 @@
 				</div>
 			</div>
 		</div>
-
-		<div class="hidden flex-1 lg:flex flex-col min-h-0 lg:flex-row">
-			{#each ['across', 'down'] as direction}
-				<div class="flex-1 flex flex-col min-h-0 lg:flex-row">
-					<div class="flex-1 flex flex-col min-h-0">
-						<h3 class="border-b-2 text-left uppercase font-bold">{direction}</h3>
-						<ul class="flex-1 overflow-y-auto">
-							{#each puzzle.clues.filter((c) => c.direction === direction) as clue}
-								<li
-									onkeydown={() => {}}
-									role="menuitem"
-									onclick={() => goToClue(clue)}
-									class="py-1 flex items-center border-l-8 cursor-pointer border-transparent pl-1"
-									class:focused-clue={currentClue === clue || clue.tiles.includes(currentTileIndex)}
-									class:bg-[#a7d8ff]={currentClue === clue}
-									class:border-l-[#a7d8ff]={clue.tiles.includes(currentTileIndex)}
-									class:text-[#98a2a9]={clue.tiles.every(
-										(t) => !tiles[t].isBlank && !!tiles[t].guess
-									)}
-								>
-									<span class="min-w-6 text-right font-bold mr-2">{clue.number}</span>
-									<span
-										class:bg-[#98a2a9]={!solved && paused}
-										class:text-[#98a2a9]={!solved && paused}
-										class:select-none={paused}>{clue.prompt}</span
-									>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				</div>
-			{/each}
+		<div class="hidden lg:flex flex-1 min-h-0">
+			<ClueList onSelectClue={goToClue} clues={puzzle.clues} { tiles } {currentClue} {currentTileIndex}
+								censor={paused && !solved} />
 		</div>
 		<div class="lg:hidden mt-2">
 			<OnScreenKeyboard onPress={(key) => onTileKeyDown(key, currentTile)} />
