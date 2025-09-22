@@ -2,10 +2,11 @@
 
 	import { type AnswerTile, type BlankTile, type Clue, type Direction, loadPuzzle } from '$lib';
 	import { onMount } from 'svelte';
-	import PopupMenu from '../components/PopupMenu.svelte';
 	import OnScreenKeyboard from '../components/OnScreenKeyboard.svelte';
 	import ClueList from '../components/ClueList.svelte';
 	import ClueStrip from '../components/ClueStrip.svelte';
+	import GameControls from '../components/GameControls.svelte';
+	import CrosswordGrid from '../components/CrosswordGrid.svelte';
 
 	type CheckStatus = 'correct' | 'incorrect' | null;
 
@@ -35,6 +36,7 @@
 	let currentDirection: Direction = $state('across');
 	let currentTileIndex: number = $state(puzzle.clues[0].tiles[0]);
 	let timerRef = $state(0);
+	let assistanceUsed = $state(false);
 	const paused = $derived(!timerRef);
 	let secondsSpent = $state(0);
 	const currentRowIndex = $derived(Math.floor(currentTileIndex / puzzle.dimensions.cols));
@@ -44,13 +46,6 @@
 	const currentClue: Clue = $derived(puzzle.clues[currentTile.clues[currentDirection]]);
 	const solved = $derived(!tiles.some((t) => !t.isBlank && t.guess !== t.answer));
 
-	const gridSideLength = 500;
-	const gridStrokeWidth = 3;
-	const marginOffset = gridStrokeWidth / 2;
-	const cellSide = gridSideLength / puzzle.dimensions.cols;
-
-	const cellX = (idx: number) => (idx % puzzle.dimensions.cols) * cellSide + marginOffset;
-	const cellY = (idx: number) => Math.floor(idx / puzzle.dimensions.cols) * cellSide + marginOffset;
 
 	$effect(() => {
 		currentTile.element?.focus();
@@ -150,7 +145,12 @@
 		}
 	};
 
+	const onTileFocus = (idx: number) => {
+		if (idx !== currentTileIndex) currentTileIndex = idx;
+	};
+
 	const onTileClick = ({ currentTarget: tile }: MouseEvent & { currentTarget: SVGGElement }) => {
+		console.log(tile !== document.activeElement);
 		if (tile !== document.activeElement) {
 			tile.focus();
 		} else {
@@ -281,14 +281,6 @@
 		}
 	};
 
-	const formatDuration = (seconds: number) => {
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-		const secondsPart = seconds % 60;
-		const minutesPart = minutes % 60;
-
-		return `${hours > 0 ? `${hours}:` : ''}${minutesPart.toString().padStart(hours > 0 ? 2 : 1, '0')}:${secondsPart.toString().padStart(2, '0')}`;
-	};
 
 	const goToClue = (clue: Clue) => {
 		if (clue.direction !== currentDirection) {
@@ -306,109 +298,13 @@
 	<div class="flex flex-col w-screen h-[100dvh] max-w-screen-2xl overflow-hidden">
 		<div class="flex flex-col overflow-hidden">
 			<div class="flex lg:flex-auto flex-col justify-center items-center">
-				<div class="flex flex-row items-center lg:justify-start py-2 gap-4 mx-auto">
-					<p>🕰️ {formatDuration(secondsSpent)}</p>
-					<button class:invisible={solved} class="hover:bg-slate-300" onclick={toggleTimer}
-					>{paused ? '▶️' : '⏸️'}
-					</button>
-					<PopupMenu
-						label="Reveal"
-						items={[
-							{ label: 'Letter', callback: () => revealTile(currentTile) },
-							{ label: 'Word', callback: () => revealClue() },
-							{ label: 'Puzzle', callback: () => revealPuzzle() }
-						]}
-					/>
-					<PopupMenu
-						label="Check"
-						items={[
-							{ label: 'Letter', callback: () => checkTile(currentTile) },
-							{ label: 'Word', callback: () => checkClue(currentClue) },
-							{ label: 'Puzzle', callback: () => checkGrid() }
-						]}
-					/>
-					<button onclick={resetPuzzle}>Reset</button>
-				</div>
+				<GameControls {secondsSpent} {solved} {paused} onResetPuzzle={resetPuzzle} onToggleTimer={toggleTimer}
+											onRevealLetter={() => revealTile(currentTile)} onRevealWord={() => revealClue()}
+											onRevealPuzzle={revealPuzzle} onCheckLetter={() => checkTile(currentTile)}
+											onCheckWord={() => checkClue(currentClue)} onCheckPuzzle={() => checkGrid()} />
 				<div class="w-full h-full max-w-2xl">
-					<svg
-						class="select-none"
-						viewBox="0 0 {gridSideLength + gridStrokeWidth} {gridSideLength + gridStrokeWidth}"
-					>
-						{#each tiles as cell, idx}
-							<g
-								bind:this={cell.element}
-								pointer-events="visible"
-								class="focus:outline-none"
-								tabindex={cell.isBlank ? null : 0}
-								role="gridcell"
-								onmousedown={cell.isBlank ? null : (ev) => ev.preventDefault()}
-								onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ev, cell)}
-								onclick={cell.isBlank ? null : onTileClick}
-								onfocus={cell.isBlank
-									? null
-									: () => {
-											if (idx !== currentTileIndex) currentTileIndex = idx;
-										}}
-							>
-								<rect
-									width={cellSide}
-									height={cellSide}
-									class:fill-[#FFDA00]={!cell.isBlank && currentTileIndex === idx}
-									class:fill-[#A7D8FF]={!cell.isBlank &&
-										currentTile.clues[currentDirection] === cell.clues[currentDirection]}
-									class:fill-black={cell.isBlank}
-									x={cellX(idx)}
-									y={cellY(idx)}
-									stroke="#696969"
-									stroke-width="1"
-									fill="none"
-								>
-								</rect>
-								{#if !cell.isBlank}
-									{#if cell.label}
-										<text font-size="10" x={cellX(idx) + 3} y={cellY(idx) + 10}>{cell.label}</text>
-									{/if}
-									<text
-										font-size="24"
-										text-anchor="middle"
-										x={cellX(idx) + cellSide / 2}
-										class:fill-[#2860d8]={cell.check === 'correct'}
-										y={cellY(idx) + cellSide - 4}>{paused && !solved ? '' : cell.guess}</text
-									>
-									{#if cell.check === 'incorrect'}
-										<line
-											transform="translate({cellX(idx)},{cellY(idx)})"
-											x1={cellSide}
-											y1="0"
-											x2="0"
-											y2={cellSide}
-											stroke="red"
-											stroke-width="1"
-										/>
-									{/if}
-									{#if cell.revealed}
-										<g transform="translate({cellX(idx)}, {cellY(idx)})">
-											<polygon
-												fill="#e63333"
-												points="{cellSide},0.00 {cellSide / 2},0.00 {cellSide},{cellSide / 2}"
-											/>
-											<circle fill="white" cx={0.85 * cellSide} cy={cellSide / 8} r="2.44" />
-										</g>
-									{/if}
-								{/if}
-							</g>
-						{/each}
-						<rect
-							class="fill-none stroke-black"
-							role="grid"
-							x={marginOffset}
-							y={marginOffset}
-							tabindex="-1"
-							width={gridSideLength}
-							height={gridSideLength}
-							stroke-width={gridStrokeWidth}
-						/>
-					</svg>
+					<CrosswordGrid {puzzle} {tiles} {currentTile} {currentTileIndex} {currentDirection} {paused} {solved}
+												 onKeyDown={onTileKeyDown} {onTileClick} {onTileFocus} />
 					<ClueStrip onNextClue={() => advanceClue(1)} onPreviousClue={() => advanceClue(-1)}
 										 prompt={currentClue.prompt} />
 				</div>
