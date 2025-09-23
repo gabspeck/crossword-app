@@ -1,7 +1,12 @@
 <script lang="ts">
-	export let onPreviousClue: () => void;
-	export let onNextClue: () => void;
-	export let prompt: string;
+
+	type ClueStripProps = {
+		onPreviousClue: () => void;
+		onNextClue: () => void;
+		prompt: string;
+	}
+
+	let { onPreviousClue, onNextClue, prompt }: ClueStripProps = $props();
 </script>
 
 <div class="h-16 px-5 flex bg-[#a7d8ff]">

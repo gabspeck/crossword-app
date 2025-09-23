@@ -2,12 +2,16 @@
 	import type { Clue } from '$lib';
 	import type { GridTile } from '$lib/types';
 
-	export let clues: Clue[];
-	export let onSelectClue: (clue: Clue) => void;
-	export let currentClue: Clue | undefined;
-	export let currentTileIndex: number;
-	export let censor: boolean;
-	export let tiles: GridTile[];
+	type ClueListProps = {
+		clues: Clue[];
+		onSelectClue: (clue: Clue) => void;
+		currentClue: Clue | undefined;
+		currentTileIndex: number;
+		censor: boolean;
+		tiles: GridTile[];
+	}
+
+	let { clues, onSelectClue, currentClue, currentTileIndex, censor, tiles }: ClueListProps = $props();
 
 </script>
 

@@ -3,16 +3,31 @@
 	import type { AnswerTile, Direction, Puzzle } from '$lib';
 	import type { GridTile, NonBlankTile } from '$lib/types';
 
-	export let puzzle: Puzzle;
-	export let tiles: GridTile[];
-	export let currentTile: AnswerTile;
-	export let currentTileIndex: number;
-	export let currentDirection: Direction;
-	export let paused: boolean;
-	export let solved: boolean;
-	export let onKeyDown: (ev: KeyboardEvent, cell: NonBlankTile) => void;
-	export let onTileClick: ({ currentTarget }: MouseEvent & { currentTarget: SVGGElement }) => void;
-	export let onTileFocus: (idx: number) => void;
+	type CrosswordGridProps = {
+		puzzle: Puzzle;
+		tiles: GridTile[];
+		currentTile: AnswerTile;
+		currentTileIndex: number;
+		currentDirection: Direction;
+		paused: boolean;
+		solved: boolean;
+		onKeyDown: (ev: KeyboardEvent, cell: NonBlankTile) => void;
+		onTileClick: ({ currentTarget }: MouseEvent & { currentTarget: SVGGElement }) => void;
+		onTileFocus: (idx: number) => void;
+	};
+
+	let {
+		puzzle,
+		tiles,
+		currentTile,
+		currentTileIndex,
+		currentDirection,
+		paused,
+		solved,
+		onKeyDown,
+		onTileClick,
+		onTileFocus
+	}: CrosswordGridProps = $props();
 
 	const gridSideLength = 500;
 	const gridStrokeWidth = 3;

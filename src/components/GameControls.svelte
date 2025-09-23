@@ -1,17 +1,33 @@
 <script lang="ts">
 	import PopupMenu from './PopupMenu.svelte';
 
-	export let secondsSpent: number;
-	export let solved: boolean;
-	export let paused: boolean;
-	export let onRevealLetter: () => void;
-	export let onRevealWord: () => void;
-	export let onRevealPuzzle: () => void;
-	export let onToggleTimer: () => void;
-	export let onCheckLetter: () => void;
-	export let onCheckWord: () => void;
-	export let onCheckPuzzle: () => void;
-	export let onResetPuzzle: () => void;
+	type GameControlsProps = {
+		secondsSpent: number;
+		solved: boolean;
+		paused: boolean;
+		onRevealLetter: () => void;
+		onRevealWord: () => void;
+		onRevealPuzzle: () => void;
+		onToggleTimer: () => void;
+		onCheckLetter: () => void;
+		onCheckWord: () => void;
+		onCheckPuzzle: () => void;
+		onResetPuzzle: () => void;
+	};
+
+	let {
+		secondsSpent,
+		solved,
+		paused,
+		onRevealLetter,
+		onRevealWord,
+		onRevealPuzzle,
+		onToggleTimer,
+		onCheckLetter,
+		onCheckWord,
+		onCheckPuzzle,
+		onResetPuzzle
+	}: GameControlsProps = $props();
 
 	const formatDuration = (seconds: number) => {
 		const minutes = Math.floor(seconds / 60);

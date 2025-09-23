@@ -1,6 +1,11 @@
 <script lang="ts">
-	export let rows: string[] = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM⌫'];
-	export let onPress: (key: string) => void;
+	const rows: string[] = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM⌫'];
+
+	type OnScreenKeyboardProps = {
+		onPress: (key: string) => void;
+	}
+
+	let { onPress }: OnScreenKeyboardProps = $props();
 
 	function handlePress(key: string) {
 		if (typeof onPress === 'function') onPress(key);
@@ -26,8 +31,8 @@
 					role="button"
 					tabindex="0"
 					aria-label={keyName(key)}
-					on:pointerdown={() => handlePress(keyName(key))}
-					on:keydown={(e) => {
+					onpointerdown={() => handlePress(keyName(key))}
+					onkeydown={(e) => {
 						if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
 							e.preventDefault();
 							handlePress(keyName(key));
