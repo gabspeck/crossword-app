@@ -1,30 +1,4 @@
-export type Direction = 'across' | 'down';
-
-export type Clue = {
-	direction: Direction;
-	number: number;
-	prompt: string;
-	tiles: number[];
-};
-
-export type BlankTile = { isBlank: true };
-export type AnswerTile = {
-	isBlank?: false;
-	label?: string;
-	answer: string;
-	clues: { [d in Direction]: number };
-};
-
-export type Tile = BlankTile | AnswerTile;
-
-export type Puzzle = {
-	dimensions: {
-		cols: number;
-		rows: number;
-	};
-	clues: Clue[];
-	tiles: Tile[];
-};
+import type { Puzzle } from '$lib/types';
 
 export function loadPuzzle(): Puzzle {
 	return {

@@ -1,46 +1,39 @@
 <script lang="ts">
 
-	import type { AnswerTile, Direction, Puzzle } from '$lib';
-	import type { GridTile, NonBlankTile } from '$lib/types';
+	import { getGameContext } from '$lib/context.svelte';
+	import { onTileKeyDown } from '$lib/input';
 
-	type CrosswordGridProps = {
-		puzzle: Puzzle;
-		tiles: GridTile[];
-		currentTile: AnswerTile;
-		currentTileIndex: number;
-		currentDirection: Direction;
-		paused: boolean;
-		solved: boolean;
-		onKeyDown: (ev: KeyboardEvent, cell: NonBlankTile) => void;
-		onTileClick: ({ currentTarget }: MouseEvent & { currentTarget: SVGGElement }) => void;
-		onTileFocus: (idx: number) => void;
-	};
-
-	let {
-		puzzle,
-		tiles,
-		currentTile,
-		currentTileIndex,
-		currentDirection,
-		paused,
-		solved,
-		onKeyDown,
-		onTileClick,
-		onTileFocus
-	}: CrosswordGridProps = $props();
+	const ctx = getGameContext();
 
 	const gridSideLength = 500;
 	const gridStrokeWidth = 3;
 	const marginOffset = gridStrokeWidth / 2;
-	const cellSide = gridSideLength / puzzle.dimensions.cols;
-	const cellX = (idx: number) => (idx % puzzle.dimensions.cols) * cellSide + marginOffset;
-	const cellY = (idx: number) => Math.floor(idx / puzzle.dimensions.cols) * cellSide + marginOffset;
+	const cellSide = gridSideLength / ctx.state.puzzle.dimensions.cols;
+	const cellX = (idx: number) => (idx % ctx.state.puzzle.dimensions.cols) * cellSide + marginOffset;
+	const cellY = (idx: number) => Math.floor(idx / ctx.state.puzzle.dimensions.cols) * cellSide + marginOffset;
+
+	const onTileClick = ({ currentTarget: tile }: MouseEvent & { currentTarget: SVGGElement }) => {
+		if (tile !== document.activeElement) {
+			tile.focus();
+		} else {
+			ctx.state.currentDirection = ctx.state.currentDirection === 'across' ? 'down' : 'across';
+		}
+	};
+
+	const onTileFocus = (idx: number) => {
+		if (idx !== ctx.state.currentTileIndex) ctx.state.currentTileIndex = idx;
+	};
+
+	$effect(() => {
+		ctx.derived.currentTile.element?.focus();
+	})
+
 </script>
 <svg
 	class="select-none"
 	viewBox="0 0 {gridSideLength + gridStrokeWidth} {gridSideLength + gridStrokeWidth}"
 >
-	{#each tiles as cell, idx}
+	{#each ctx.state.tiles as cell, idx}
 		<g
 			bind:this={cell.element}
 			pointer-events="visible"
@@ -48,7 +41,7 @@
 			tabindex={cell.isBlank ? null : 0}
 			role="gridcell"
 			onmousedown={cell.isBlank ? null : (ev) => ev.preventDefault()}
-			onkeydown={cell.isBlank ? null : (ev) => onKeyDown(ev, cell)}
+			onkeydown={cell.isBlank ? null : (ev) => onTileKeyDown(ctx, ev, cell)}
 			onclick={cell.isBlank ? null : onTileClick}
 			onfocus={cell.isBlank
 									? null
@@ -56,9 +49,9 @@
 			<rect
 				width={cellSide}
 				height={cellSide}
-				class:fill-[#FFDA00]={!cell.isBlank && currentTileIndex === idx}
+				class:fill-[#FFDA00]={!cell.isBlank && ctx.state.currentTileIndex === idx}
 				class:fill-[#A7D8FF]={!cell.isBlank &&
-										currentTile.clues[currentDirection] === cell.clues[currentDirection]}
+										ctx.derived.currentTile.clues[ctx.state.currentDirection] === cell.clues[ctx.state.currentDirection]}
 				class:fill-black={cell.isBlank}
 				x={cellX(idx)}
 				y={cellY(idx)}
@@ -76,7 +69,7 @@
 					text-anchor="middle"
 					x={cellX(idx) + cellSide / 2}
 					class:fill-[#2860d8]={cell.check === 'correct'}
-					y={cellY(idx) + cellSide - 4}>{paused && !solved ? '' : cell.guess}</text
+					y={cellY(idx) + cellSide - 4}>{ctx.derived.paused && !ctx.derived.solved ? '' : cell.guess}</text
 				>
 				{#if cell.check === 'incorrect'}
 					<line

@@ -1,15 +1,8 @@
 <script lang="ts">
+	import { onTileKeyDown } from '$lib/input';
+	import { getGameContext } from '$lib/context.svelte';
+
 	const rows: string[] = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM⌫'];
-
-	type OnScreenKeyboardProps = {
-		onPress: (key: string) => void;
-	}
-
-	let { onPress }: OnScreenKeyboardProps = $props();
-
-	function handlePress(key: string) {
-		if (typeof onPress === 'function') onPress(key);
-	}
 
 	const keyName = (key: string): string => {
 		const specialKeys: Record<string, string> = {
@@ -18,6 +11,8 @@
 
 		return specialKeys[key] ?? key;
 	};
+
+	const ctx = getGameContext();
 
 </script>
 
@@ -31,11 +26,11 @@
 					role="button"
 					tabindex="0"
 					aria-label={keyName(key)}
-					onpointerdown={() => handlePress(keyName(key))}
+					onpointerdown={() => onTileKeyDown(keyName(key), ctx.derived.currentTile)}
 					onkeydown={(e) => {
 						if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
 							e.preventDefault();
-							handlePress(keyName(key));
+							onTileKeyDown(keyName(key), ctx.derived.currentTile);
 						}
 					}}
 				>
